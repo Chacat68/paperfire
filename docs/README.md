@@ -6,5 +6,6 @@
 | 02 | [design/02-核心循环短拆.md](design/02-核心循环短拆.md) | 阿波罗：日夜双经营循环 |
 | 03 | [design/03-日夜角色特征草案.md](design/03-日夜角色特征草案.md) | 阿波罗：镇脸与日夜错位 |
 | 04 | [design/04-详细规则方案.md](design/04-详细规则方案.md) | 阿波罗：资源/订单/禁忌/失败/角色接口 + 示例数值 |
+| — | [design/modules/](design/modules/) | v0.2-module-gdd：完整模块策划（规则 + UI）；索引见 [design/README.md](design/README.md) |
 
 口径摘要：经营为主、生存为辅；白天阳间 / 晚上诡异；冷幽默 + 偶发高压；外乡接手祖业。
