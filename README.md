@@ -45,6 +45,7 @@
 | --- | --- |
 | [docs/README.md](docs/README.md) | 设计文档索引 |
 | [docs/concept/01-概念一页纸.md](docs/concept/01-概念一页纸.md) | 题材与立项概念 |
+| [docs/design/01-背景设定-世界观与诡异规则.md](docs/design/01-背景设定-世界观与诡异规则.md) | 世界观与诡异规则（可改稿） |
 | [docs/design/02-核心循环短拆.md](docs/design/02-核心循环短拆.md) | 日夜双经营循环 |
 | [docs/design/03-日夜角色特征草案.md](docs/design/03-日夜角色特征草案.md) | 镇脸与日夜错位 |
 | [docs/design/04-详细规则方案.md](docs/design/04-详细规则方案.md) | 资源 / 订单 / 禁忌 / 失败 / 角色接口 + 示例数值 |
