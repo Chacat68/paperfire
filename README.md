@@ -48,6 +48,7 @@
 | [docs/design/02-核心循环短拆.md](docs/design/02-核心循环短拆.md) | 日夜双经营循环 |
 | [docs/design/03-日夜角色特征草案.md](docs/design/03-日夜角色特征草案.md) | 镇脸与日夜错位 |
 | [docs/design/04-详细规则方案.md](docs/design/04-详细规则方案.md) | 资源 / 订单 / 禁忌 / 失败 / 角色接口 + 示例数值 |
+| [docs/design/modules/](docs/design/modules/) | v0.2-module-gdd：完整模块策划（规则 + UI，00–11）；见 [docs/design/README.md](docs/design/README.md) |
 
 ## 状态
 
