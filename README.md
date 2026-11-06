@@ -46,6 +46,7 @@
 | [docs/README.md](docs/README.md) | 设计文档索引 |
 | [docs/concept/01-概念一页纸.md](docs/concept/01-概念一页纸.md) | 题材与立项概念 |
 | [docs/design/纸火-设计方案.md](docs/design/纸火-设计方案.md) | **V0.3 唯一主设计文**（替换旧 `modules/` 与 `02`–`04` 分册；背景设定已并入第2章） |
+| [docs/design/01-背景设定-世界观与诡异规则.md](docs/design/01-背景设定-世界观与诡异规则.md) | 世界观与诡异规则（可改稿；**与第2章矛盾时以第2章为准**） |
 | [docs/design/README.md](docs/design/README.md) | 设计目录阅读入口与废止说明 |
 
 ## 状态
