@@ -45,12 +45,10 @@
 | --- | --- |
 | [docs/README.md](docs/README.md) | 设计文档索引 |
 | [docs/concept/01-概念一页纸.md](docs/concept/01-概念一页纸.md) | 题材与立项概念 |
-| [docs/design/01-背景设定-世界观与诡异规则.md](docs/design/01-背景设定-世界观与诡异规则.md) | 世界观与诡异规则（可改稿） |
-| [docs/design/02-核心循环短拆.md](docs/design/02-核心循环短拆.md) | 日夜双经营循环 |
-| [docs/design/03-日夜角色特征草案.md](docs/design/03-日夜角色特征草案.md) | 镇脸与日夜错位 |
-| [docs/design/04-详细规则方案.md](docs/design/04-详细规则方案.md) | 资源 / 订单 / 禁忌 / 失败 / 角色接口 + 示例数值 |
-| [docs/design/modules/](docs/design/modules/) | v0.2-module-gdd：完整模块策划（规则 + UI，00–11）；见 [docs/design/README.md](docs/design/README.md) |
+| [docs/design/纸火-设计方案.md](docs/design/纸火-设计方案.md) | **V0.3 唯一主设计文**（替换旧 `modules/` 与 `02`–`04` 分册；背景设定已并入第2章） |
+| [docs/design/01-背景设定-世界观与诡异规则.md](docs/design/01-背景设定-世界观与诡异规则.md) | 世界观与诡异规则（可改稿；**与第2章矛盾时以第2章为准**） |
+| [docs/design/README.md](docs/design/README.md) | 设计目录阅读入口与废止说明 |
 
 ## 状态
 
-立项自用可改稿；文中数值均为示例，非正式平衡定稿。
+立项自用可改稿；文中数值均为示例，非正式平衡定稿。主设计见 V0.3。
