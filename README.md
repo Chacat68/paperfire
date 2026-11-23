@@ -1,4 +1,4 @@
-# paperfire（《纸火》）
+# paperfire《纸火》
 
 > Working title **《纸火》 / Paper Fire** — a Chinese eerie folk **management–survival** PC short game: daytime yang (mortal) business, nighttime weird business. Management primary, survival secondary.
 
