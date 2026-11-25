@@ -1,0 +1,19 @@
+{
+  "name": "paperfire",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "《纸火》中式诡异民俗经营生存游戏 — Vite + TypeScript 模块化工程",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2",
+    "vitest": "^3.0.9"
+  }
+}
