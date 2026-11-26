@@ -30,6 +30,18 @@ function pickNightOrderIcon(order: NightOrderDef): CardIconKind {
       return 'deity';
     case 'opera_ghost':
       return 'opera';
+    case 'zodiac_goat':
+      return 'deity';
+    case 'midnight_courier':
+      return 'lantern';
+    case 'smiling_surgeon':
+      return 'clinic';
+    case 'crimson_senior':
+      return 'bride';
+    case 'zuowang_jester':
+      return 'opera';
+    case 'puppet_twins':
+      return 'doll';
     default:
       return 'lantern';
   }
@@ -325,7 +337,9 @@ export function rejectRealNightOrder(
   }
   note(
     state,
-    `你婉拒了「${order.client}」，对方默不作声收起纸单退去——并无异状破绽，似乎错把今夜正规诡客拒之门外。门外尚余另一位来客，仍可听清破绽识破诱杀，或直接落闩收摊。`
+    order.specialViral
+      ? `你婉拒了异闻奇客「${order.client}」，对方轻笑一声退入夜雾。门外尚余其他来客，可继续听清来意或落闩收摊。`
+      : `你婉拒了「${order.client}」，对方默不作声收起纸单退去——并无异状破绽，似乎错把今夜正规诡客拒之门外。门外尚余另一位来客，仍可听清破绽识破诱杀，或直接落闩收摊。`
   );
 }
 
@@ -581,7 +595,13 @@ export function buildNightBoardMoves(state: GameState): ActionOption[] {
     const rejected = state.rejectedNightOrderIds.includes(order.id);
     const heard = state.listenedOrderIds.includes(order.id);
     const promised = !order.isTrap && order.promisedKey === 'wu_d2' && state.promiseWu;
-    const tag = promised ? '日接夜交' : !order.isTrap && order.peak ? '顶格夜单' : '夜客委托';
+    const tag = promised
+      ? '日接夜交'
+      : !order.isTrap && order.peak
+        ? '顶格夜单'
+        : !order.isTrap && order.specialViral
+          ? '奇诡特邀'
+          : '夜客委托';
     moves.push({
       id: `pick_night_${order.id}`,
       title: order.title,

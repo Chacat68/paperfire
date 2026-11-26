@@ -47,8 +47,9 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
   const paperPattern = ctx && patterns ? ctx.createPattern(patterns.paperTile, 'repeat') : null;
 
   let currentFilter: RosterFilter = 'all';
-  let selectedId = 'chen_auntie';
+  let selectedId = 'liu_tailor';
   let latestState: GameState | null = null;
+  const detailEl = dialog.querySelector<HTMLElement>('.roster-detail');
 
   function isMet(profile: CharacterProfile): boolean {
     if (!latestState) return false;
@@ -64,7 +65,7 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
     return CHARACTER_LIST.filter((c) => c.camp === currentFilter);
   }
 
-  function drawPortrait(profile: CharacterProfile) {
+  function drawPortrait(profile: CharacterProfile, met: boolean) {
     if (!ctx || !patterns) return;
     const W = 280;
     const H = 320;
@@ -77,7 +78,11 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
 
     const eerieBg = profile.camp === 'eerie' || profile.camp === 'trap';
     const bg = ctx.createLinearGradient(0, 0, 0, H);
-    if (eerieBg) {
+    if (!met) {
+      bg.addColorStop(0, '#111112');
+      bg.addColorStop(0.55, '#1d1c1b');
+      bg.addColorStop(1, '#0b0a0a');
+    } else if (eerieBg) {
       bg.addColorStop(0, '#131619');
       bg.addColorStop(0.55, '#1f2529');
       bg.addColorStop(1, '#0d1012');
@@ -91,14 +96,20 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
 
     if (patterns.woodcutH) {
       ctx.save();
-      ctx.globalAlpha = eerieBg ? 0.24 : 0.2;
+      ctx.globalAlpha = !met ? 0.22 : eerieBg ? 0.24 : 0.2;
       ctx.fillStyle = patterns.woodcutH;
       ctx.fillRect(0, 0, W, H);
       ctx.restore();
     }
 
     // Subtle moon / ink halo behind portrait
-    if (eerieBg) {
+    if (!met) {
+      drawInkWashBlot(ctx, W * 0.5, H * 0.44, 120, 120, 0.42, '20, 18, 16');
+      ctx.fillStyle = 'rgba(218, 206, 184, 0.08)';
+      ctx.beginPath();
+      ctx.arc(W * 0.5, 102, 54, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (eerieBg) {
       drawInkWashBlot(ctx, W * 0.5, H * 0.42, 110, 110, 0.32, profile.camp === 'trap' ? '176, 36, 28' : '215, 224, 218');
       ctx.fillStyle = 'rgba(236, 232, 218, 0.14)';
       ctx.beginPath();
@@ -111,23 +122,52 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
       ctx.fill();
     }
 
-    // Draw full detailed ink-wash character centered cleanly
+    // Draw full detailed ink-wash character (heavily blurred & darkened silhouette when unmet)
     const tallVariant =
       profile.art === 'temple_deity' || profile.art === 'opera_ghost' || profile.art === 'paper_bride';
+    ctx.save();
+    if (!met) {
+      ctx.filter = 'blur(13px) brightness(0.14) contrast(1.4)';
+    }
     drawComicGuest(ctx, {
       variant: profile.art as GuestVariant,
       x: W * 0.5,
       y: tallVariant ? H - 16 : H - 22,
       scale: tallVariant ? 0.84 : 0.96,
-      alpha: 1,
+      alpha: met ? 1 : 0.78,
       talking: false,
       armRaised: false,
       seconds: 0.6,
       slow: true,
-      darkness: eerieBg ? 0.92 : 0.08,
+      darkness: !met ? 1 : eerieBg ? 0.92 : 0.08,
       threat: profile.camp === 'trap' ? 3 : 2,
       patterns
     });
+    ctx.restore();
+
+    if (!met) {
+      // Swirling sumi-ink fog veil over the blurred silhouette
+      drawInkWashBlot(ctx, W * 0.36, H * 0.52, 125, 90, 0.62, '14, 13, 12');
+      drawInkWashBlot(ctx, W * 0.68, H * 0.66, 130, 95, 0.68, '10, 10, 11');
+      drawInkWashBlot(ctx, W * 0.5, H * 0.34, 115, 76, 0.54, '16, 15, 14');
+
+      // Crisp mystery emblem stamp in center
+      ctx.save();
+      ctx.fillStyle = 'rgba(16, 12, 11, 0.84)';
+      ctx.strokeStyle = 'rgba(218, 176, 125, 0.45)';
+      ctx.lineWidth = 1.4;
+      ctx.fillRect(W * 0.5 - 64, H * 0.5 - 26, 128, 52);
+      ctx.strokeRect(W * 0.5 - 64, H * 0.5 - 26, 128, 52);
+      ctx.fillStyle = '#e8d8be';
+      ctx.font = '700 18px "Songti SC","STSong","Noto Serif CJK SC",serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('未 照 面', W * 0.5, H * 0.5 - 6);
+      ctx.fillStyle = 'rgba(214, 186, 148, 0.75)';
+      ctx.font = '500 11px "Songti SC","STSong","Noto Serif CJK SC",serif';
+      ctx.fillText('浓雾遮面 · 遇后显形', W * 0.5, H * 0.5 + 14);
+      ctx.restore();
+    }
 
     if (paperPattern) {
       ctx.save();
@@ -141,23 +181,59 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
     ctx.strokeStyle = INK;
     ctx.lineWidth = 3.5;
     ctx.strokeRect(3, 3, W - 6, H - 6);
-    ctx.strokeStyle = eerieBg ? 'rgba(232, 224, 206, 0.24)' : 'rgba(22, 18, 16, 0.28)';
+    ctx.strokeStyle = !met || eerieBg ? 'rgba(232, 224, 206, 0.24)' : 'rgba(22, 18, 16, 0.28)';
     ctx.lineWidth = 1.1;
     ctx.strokeRect(9, 9, W - 18, H - 18);
-    drawRepublicanFrameCorners(ctx, W, H, eerieBg ? 'rgba(220, 62, 48, 0.55)' : 'rgba(176, 38, 28, 0.45)');
-    drawRedSeal(ctx, W - 30, 30, 26, profile.sealChar);
+    drawRepublicanFrameCorners(
+      ctx,
+      W,
+      H,
+      !met ? 'rgba(218, 176, 125, 0.35)' : eerieBg ? 'rgba(220, 62, 48, 0.55)' : 'rgba(176, 38, 28, 0.45)'
+    );
+    drawRedSeal(ctx, W - 30, 30, 26, met ? profile.sealChar : '？');
   }
 
   function renderDetail(profile: CharacterProfile) {
     const met = isMet(profile);
-    drawPortrait(profile);
+    detailEl?.classList.toggle('is-unmet', !met);
+    drawPortrait(profile, met);
+
+    if (!met) {
+      sealEl.textContent = '？';
+      nameEl.textContent = '？？？';
+      campEl.textContent = CAMP_LABELS[profile.camp];
+      campEl.dataset.camp = profile.camp;
+      titleEl.textContent = '尚未照面 · 档案尚隐于老镇浓雾之中';
+      metBadgeEl.textContent = '未照面 · 已封存';
+      metBadgeEl.classList.remove('met');
+
+      traitsEl.replaceChildren(
+        ...['？？？', '？？？', '？？？'].map((t) => {
+          const span = document.createElement('span');
+          span.className = 'rd-trait masked';
+          span.textContent = t;
+          return span;
+        })
+      );
+      appearanceEl.textContent = '浓雾遮目，未曾亲眼照面前无法辨清衣着与随身特征。';
+      bioEl.textContent = '此人尚未登门或偶遇。继续经营铺面、巡游街巷或迎客入夜，照面后即可解封其完整人物小传。';
+      ruleLabelEl.textContent =
+        profile.camp === 'trap'
+          ? '破绽与识破要点'
+          : profile.camp === 'eerie'
+            ? '夜客规矩与履约要点'
+            : '街坊习性与营业贴士';
+      ruleEl.textContent = '尚未照面，习性与忌讳暂不可查。';
+      return;
+    }
+
     sealEl.textContent = profile.sealChar;
     nameEl.textContent = profile.name;
     campEl.textContent = CAMP_LABELS[profile.camp];
     campEl.dataset.camp = profile.camp;
     titleEl.textContent = profile.title;
-    metBadgeEl.textContent = met ? '已照面' : `首现 · 第 ${profile.firstDay} 日`;
-    metBadgeEl.classList.toggle('met', met);
+    metBadgeEl.textContent = '已照面';
+    metBadgeEl.classList.add('met');
 
     traitsEl.replaceChildren(
       ...profile.traits.map((t) => {
@@ -181,7 +257,7 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
   function renderAll() {
     const items = filteredList();
     if (!items.some((c) => c.id === selectedId) && items.length > 0) {
-      selectedId = items[0].id;
+      selectedId = (items.find((c) => isMet(c)) ?? items[0]).id;
     }
 
     const metCount = CHARACTER_LIST.filter((c) => isMet(c)).length;
@@ -195,16 +271,17 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
 
     listEl.replaceChildren(
       ...items.map((c) => {
+        const met = isMet(c);
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `roster-item camp-${c.camp}${c.id === selectedId ? ' active' : ''}${isMet(c) ? ' met' : ''}`;
+        btn.className = `roster-item camp-${c.camp}${c.id === selectedId ? ' active' : ''}${met ? ' met' : ' unmet'}`;
         btn.dataset.charId = c.id;
-        btn.innerHTML = `<span class="ri-seal">${c.sealChar}</span>
+        btn.innerHTML = `<span class="ri-seal">${met ? c.sealChar : '？'}</span>
           <span class="ri-body">
-            <strong>${c.name}</strong>
-            <small>${c.bubbleIdentity}</small>
+            <strong>${met ? c.name : '？？？'}</strong>
+            <small>${met ? c.bubbleIdentity : '尚未照面 · 雾中剪影'}</small>
           </span>
-          <span class="ri-tag">${isMet(c) ? '已遇' : `D${c.firstDay}`}</span>`;
+          <span class="ri-tag">${met ? '已遇' : '未遇'}</span>`;
         return btn;
       })
     );
@@ -241,6 +318,11 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
       if (initialCharId && CHARACTER_PROFILES[initialCharId]) {
         selectedId = initialCharId;
         currentFilter = 'all';
+      } else {
+        const cur = CHARACTER_PROFILES[selectedId];
+        if (!cur || !isMet(cur)) {
+          selectedId = (CHARACTER_LIST.find((c) => isMet(c)) ?? CHARACTER_LIST[0]).id;
+        }
       }
       renderAll();
       dialog.showModal();

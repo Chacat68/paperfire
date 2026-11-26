@@ -43,6 +43,11 @@ export const SCENARIOS: ScenarioDef[] = [
     detail: '体验首场顶格诡异履约、具名人情卡与系统护身替纸人'
   },
   {
+    id: 'd8_viral',
+    title: 'D8 异闻奇客夜 · 十二生肖「人羊」专场',
+    detail: '直面热门诡异奇客「十二生肖面具官 · 人羊」与断线裁缝诡，体验专属规则对弈'
+  },
+  {
     id: 'd10_temple',
     title: 'D10 庙会顶格夜 · 百戏游神压境',
     detail: '白天彩扎龙头特单 · 夜里 3 回合礼送游神斩获巨额纸火点'

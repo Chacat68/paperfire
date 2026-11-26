@@ -39,6 +39,154 @@ export function createHudController(): HudController {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let prevStats: StatSnapshot | null = null;
   let curtainTimer = 0;
+  let displayedPts: number | null = null;
+  let ptsRollRaf = 0;
+  let ptsRollStartVal = 0;
+  let ptsRollTargetVal = 0;
+  let ptsRollStartTime = 0;
+  let ptsRollDuration = 0;
+
+  function stopPtsRoll() {
+    if (ptsRollRaf) {
+      cancelAnimationFrame(ptsRollRaf);
+      ptsRollRaf = 0;
+    }
+  }
+
+  function applyDisplayedPtsToDom(val: number, rolling: boolean) {
+    const rounded = Math.round(val);
+    const hudVal = byId('quick-resources').querySelector<HTMLElement>('[data-stat="pts"] dd');
+    if (hudVal) {
+      hudVal.textContent = String(rounded);
+      hudVal.classList.toggle('pts-rolling', rolling);
+    }
+    const ledgerVal = byId('resources').querySelector<HTMLElement>('[data-stat="pts"] dd');
+    if (ledgerVal) {
+      ledgerVal.textContent = String(rounded);
+    }
+    const sysVal = document.querySelector<HTMLElement>('#system-shop-status .sys-asset.primary strong');
+    if (sysVal) {
+      sysVal.textContent = String(rounded);
+      sysVal.classList.toggle('pts-rolling', rolling);
+    }
+  }
+
+  function startPtsRoll(from: number, to: number) {
+    stopPtsRoll();
+    if (reducedMotion.matches || from === to) {
+      displayedPts = to;
+      applyDisplayedPtsToDom(to, false);
+      return;
+    }
+    const delta = Math.abs(to - from);
+    ptsRollStartVal = from;
+    ptsRollTargetVal = to;
+    ptsRollStartTime = performance.now();
+    ptsRollDuration = to > from ? Math.min(980, Math.max(540, 440 + delta * 18)) : 240;
+
+    const step = (now: number) => {
+      const t = Math.min(1, (now - ptsRollStartTime) / ptsRollDuration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      displayedPts = ptsRollStartVal + (ptsRollTargetVal - ptsRollStartVal) * eased;
+      if (t < 1) {
+        applyDisplayedPtsToDom(displayedPts, to > from);
+        ptsRollRaf = requestAnimationFrame(step);
+      } else {
+        ptsRollRaf = 0;
+        displayedPts = ptsRollTargetVal;
+        applyDisplayedPtsToDom(ptsRollTargetVal, false);
+        if (to > from) {
+          const hudVal = byId('quick-resources').querySelector<HTMLElement>('[data-stat="pts"] dd');
+          if (hudVal) {
+            hudVal.classList.remove('pts-land-pop');
+            void hudVal.offsetWidth;
+            hudVal.classList.add('pts-land-pop');
+          }
+        }
+      }
+    };
+    ptsRollRaf = requestAnimationFrame(step);
+  }
+
+  function spawnPtsGainEffect(diff: number) {
+    if (reducedMotion.matches || diff <= 0) return;
+
+    const systemDialog = document.getElementById('system-shop') as HTMLDialogElement | null;
+    const targetEl =
+      systemDialog?.open
+        ? document.querySelector<HTMLElement>('#system-shop-status .sys-asset.primary')
+        : byId('quick-resources').querySelector<HTMLElement>('[data-stat="pts"]');
+    if (!targetEl) return;
+
+    const rect = targetEl.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    const tx = rect.left + rect.width * 0.5;
+    const ty = rect.top + rect.height * 0.5;
+
+    // 1. Glow highlight on the pts slot itself
+    targetEl.classList.remove('pts-gain-glow');
+    void targetEl.offsetWidth;
+    targetEl.classList.add('pts-gain-glow');
+    window.setTimeout(() => targetEl.classList.remove('pts-gain-glow'), 1050);
+
+    // 2. Fullscreen temporary FX layer for flying Paperfire embers + impact ring
+    const layer = document.createElement('div');
+    layer.className = 'pts-fx-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    const hostRoot = systemDialog?.open ? systemDialog : document.body;
+    hostRoot.append(layer);
+
+    // Launch 6–9 luminous cinnabar-gold embers from mid-lower stage into the pts badge
+    const sparkCount = Math.min(9, Math.max(5, Math.ceil(diff / 4) + 3));
+    const originX = window.innerWidth * 0.5;
+    const originY = Math.min(window.innerHeight * 0.62, window.innerHeight - 190);
+    for (let i = 0; i < sparkCount; i++) {
+      const spark = document.createElement('i');
+      spark.className = `pts-fly-ember${i % 3 === 0 ? ' crimson' : ''}`;
+      const sx = originX + (Math.random() - 0.5) * 180;
+      const sy = originY + (Math.random() - 0.5) * 70;
+      const midX = (sx + tx) * 0.5 + (Math.random() - 0.5) * 140;
+      const midY = Math.min(sy, ty) - 40 - Math.random() * 65;
+      const delay = i * 38;
+      spark.style.left = `${sx}px`;
+      spark.style.top = `${sy}px`;
+      spark.style.setProperty('--mx', `${midX - sx}px`);
+      spark.style.setProperty('--my', `${midY - sy}px`);
+      spark.style.setProperty('--tx', `${tx - sx}px`);
+      spark.style.setProperty('--ty', `${ty - sy}px`);
+      spark.style.animationDelay = `${delay}ms`;
+      layer.append(spark);
+    }
+
+    // 3. Impact shockwave ring + radial micro-sparks centered on pts slot
+    const ring = document.createElement('span');
+    ring.className = 'pts-burst-ring';
+    ring.style.left = `${tx}px`;
+    ring.style.top = `${ty}px`;
+    layer.append(ring);
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8 + (i % 2) * 0.18;
+      const dist = 24 + (i % 3) * 10;
+      const dot = document.createElement('i');
+      dot.className = 'pts-radial-spark';
+      dot.style.left = `${tx}px`;
+      dot.style.top = `${ty}px`;
+      dot.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+      dot.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+      layer.append(dot);
+    }
+
+    // 4. Prominent cinnabar-gold '+X 纸火点' banner pop beneath target
+    const banner = document.createElement('span');
+    banner.className = 'pts-gain-banner';
+    banner.textContent = `+${diff} 纸火点`;
+    banner.style.left = `${tx}px`;
+    banner.style.top = `${rect.bottom + 8}px`;
+    layer.append(banner);
+
+    window.setTimeout(() => layer.remove(), 1450);
+  }
 
   function hideTransition() {
     clearTimeout(curtainTimer);
@@ -62,12 +210,21 @@ export function createHudController(): HudController {
   function spawnDeltas(current: StatSnapshot) {
     if (!prevStats) {
       prevStats = current;
+      displayedPts = current.pts;
       return;
     }
     const keys: Array<keyof StatSnapshot> = ['ap', 'f', 'm', 's', 'c', 'h', 'pts', 'ration'];
     for (const key of keys) {
       const diff = current[key] - prevStats[key];
       if (!diff) continue;
+      if (key === 'pts') {
+        const fromVal = displayedPts ?? prevStats.pts;
+        startPtsRoll(fromVal, current.pts);
+        if (diff > 0) {
+          spawnPtsGainEffect(diff);
+          continue;
+        }
+      }
       const slot = byId('quick-resources').querySelector<HTMLElement>(`[data-stat="${key}"]`);
       if (!slot) continue;
       const good = key === 'h' ? diff < 0 : diff > 0;
@@ -137,7 +294,9 @@ export function createHudController(): HudController {
 
   return {
     resetDeltas() {
+      stopPtsRoll();
       prevStats = null;
+      displayedPts = null;
     },
     syncAudioUI,
     showTransition,
@@ -198,9 +357,16 @@ export function createHudController(): HudController {
             ? meta.nightLine
             : meta.dayLine;
 
+      const shownPts =
+        ptsRollRaf && displayedPts !== null
+          ? Math.round(displayedPts)
+          : prevStats && prevStats.pts !== state.pts && !reducedMotion.matches
+            ? Math.round(displayedPts ?? prevStats.pts)
+            : state.pts;
+
       const tally: Array<[string, string, string | number]> = [
         [nighttime ? 'f' : 'ap', nighttime ? '人情' : '工时', nighttime ? state.f : `${state.ap}/${state.apMax}`],
-        ['pts', '纸火点', state.pts],
+        ['pts', '纸火点', shownPts],
         ['ration', '口粮', state.ration],
         ['m', '现金', state.m],
         ['s', '纸料', state.s],

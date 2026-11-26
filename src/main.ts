@@ -344,6 +344,7 @@ function runMove(move: ActionOption) {
     sfx.reward();
   } else if (
     move.id.startsWith('craft_') ||
+    move.id.startsWith('vir-') ||
     [
       'seal',
       'deliver',

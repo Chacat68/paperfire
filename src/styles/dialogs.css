@@ -395,6 +395,24 @@ dialog::backdrop{background:rgba(7,6,7,.76);backdrop-filter:blur(3px)}
   border:1px solid var(--soft-line);color:var(--muted);
 }
 .roster-item.met .ri-tag{border-color:rgba(142,184,148,.55);color:#cfe9cf;background:rgba(142,184,148,.12)}
+.roster-item.unmet{opacity:.66}
+.roster-item.unmet .ri-seal{background:#231f1d;border-color:rgba(218,176,125,.28);color:#9f9280}
+.roster-item.unmet .ri-body strong{color:#bfb29e;letter-spacing:.14em}
+.roster-item.unmet .ri-body small{filter:blur(1.2px);user-select:none}
+.roster-item.unmet.active{opacity:.94}
+
+.roster-detail.is-unmet .rd-seal{
+  background:linear-gradient(155deg,#2e2825,#1a1715);
+  border-color:rgba(218,176,125,.35);color:#a89b89;
+}
+.roster-detail.is-unmet .rd-name-row h3{color:#bfb29e;letter-spacing:.16em}
+.roster-detail.is-unmet .rd-subtitle{color:var(--muted)}
+.roster-detail.is-unmet .rd-trait.masked{
+  color:rgba(220,206,184,.55);border-style:dashed;filter:blur(1.4px);user-select:none;
+}
+.roster-detail.is-unmet .rd-section p{
+  color:rgba(214,200,178,.68);filter:blur(.7px);
+}
 
 .roster-detail{
   display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;

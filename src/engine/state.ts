@@ -258,6 +258,29 @@ export function createRun(mode: ScenarioId = 'd1_full'): GameState {
       message: '【系统警报】北巷无声唢呐响起，今夜将迎首场 3 回合顶格诡异「无轿纸新娘」！'
     });
     run.log.push('D6 · 进入首场顶格诡异夜，已备好柳裁缝人情卡与护身替纸人。');
+  } else if (mode === 'd8_viral') {
+    Object.assign(run, {
+      day: 8,
+      maxDay: 15,
+      ap: 4,
+      apMax: 6,
+      m: 112,
+      s: 9,
+      c: 8,
+      h: 5,
+      f: 3,
+      ty: 7,
+      tn: 5,
+      pts: 68,
+      ration: 3,
+      upgrades: ['copper_bell'],
+      items: { strip: 0, talisman: 1, wardDoll: 1 },
+      favorCards: ['card_liu'],
+      tokens: [{ id: 'bronze_clasp', name: '旧账铜扣', desc: '五日稳局信物 · 证明铺子已在阴间挂号立稳' }],
+      outcomes: { 1: 'success', 2: 'success', 3: 'success', 4: 'success', 5: 'success', 6: 'success', 7: 'success' },
+      message: '【异闻奇客专场】落锁入夜即可直面「十二生肖面具官 · 人羊」等热门诡异奇客！'
+    });
+    run.log.push('D8 · 异闻奇客夜开启，落锁入夜即可迎战「十二生肖面具官 · 人羊」。');
   } else if (mode === 'd10_temple') {
     Object.assign(run, {
       day: 10,

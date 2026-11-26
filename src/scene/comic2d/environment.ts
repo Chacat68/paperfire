@@ -16,6 +16,7 @@ import {
   inkRect,
   lerpColor
 } from './textures';
+import { drawWindowOutdoorWorld } from './windowWorld';
 
 export interface EnvDrawState {
   state: GameState;
@@ -368,22 +369,8 @@ function drawLatticeWindow(
     ctx.restore();
   }
 
-  // Distant ink-wash tiled roofs & village gables (水墨远景青瓦飞檐)
-  const roofColor = lerpColor('#3f3d38', '#0c0e10', darkness);
-  inkPoly(
-    ctx,
-    [
-      [x - 10, y + h + 4],
-      [x - 10, y + h - 42],
-      [x + w * 0.35, y + h - 68],
-      [x + w * 0.42, y + h - 54],
-      [x + w * 0.72, y + h - 74],
-      [x + w + 10, y + h - 48],
-      [x + w + 10, y + h + 4]
-    ],
-    roofColor,
-    1.8
-  );
+  // Unified outdoor streetscape: opposite Qilou roofs, glowing windows, weather, mist & passing day/night characters!
+  drawWindowOutdoorWorld(ctx, x, y, w, h, env, isMain);
 
   // Dry-brush gnarled willow branch & swaying ink strands outside window
   const sway = slow ? 0 : Math.sin(seconds * 0.9) * 6 + eerie.windGust * 22;
@@ -781,26 +768,19 @@ function drawShopDoor(
 }
 
 /**
- * Layer 2.5: Three Hanging Silk Lanterns (一点朱砂红灯笼 — swaying with cold drafts & dimming!)
+ * Layer 2.5: Two Hanging Silk Lanterns (铺檐两侧「纸」「火」双红灯笼 — swaying with cold drafts & dimming!)
  */
 export function drawHangingLanterns(ctx: CanvasRenderingContext2D, env: EnvDrawState) {
-  const { third, steps, darkness, seconds, slow, highlightedKey, eerie } = env;
+  const { darkness, seconds, slow, eerie } = env;
   const positions = [
-    { x: 468, y: 212, cordLen: 104, scale: 0.92 },
-    { x: 780, y: 234, cordLen: 126, scale: 1.0 },
-    { x: 1012, y: 216, cordLen: 108, scale: 0.94 }
+    { x: 456, y: 214, cordLen: 106, scale: 0.96, label: '纸' },
+    { x: 1192, y: 214, cordLen: 106, scale: 0.96, label: '火' }
   ];
 
   positions.forEach((p, idx) => {
-    const isThirdLamp = idx === 2;
-    const off = third && isThirdLamp;
-    const secured = off && steps.includes('lamp');
     const dimFactor = 1 - eerie.lanternDim;
     const breath = slow ? 0 : Math.sin(seconds * 1.15 + idx * 1.9) * 0.08;
-    const sway =
-      slow
-        ? 0
-        : Math.sin(seconds * 0.85 + idx * 1.6) * (off && !secured ? 0.055 : 0.024) + eerie.windGust * 0.14;
+    const sway = slow ? 0 : Math.sin(seconds * 0.85 + idx * 1.6) * 0.024 + eerie.windGust * 0.14;
 
     ctx.save();
     ctx.translate(p.x, p.y - p.cordLen);
@@ -811,35 +791,21 @@ export function drawHangingLanterns(ctx: CanvasRenderingContext2D, env: EnvDrawS
     ctx.translate(0, p.cordLen);
     ctx.scale(p.scale, p.scale);
 
-    if (isThirdLamp && highlightedKey === 'lamp') {
-      drawHighlightAura(ctx, 0, 0, 74, 86, slow ? 0.5 : 0.5 + 0.5 * Math.sin(seconds * 3.5), true);
-    }
-
-    if (!off) {
-      const glowR = (128 + darkness * 44 + breath * 14) * (0.76 + dimFactor * 0.24);
-      const g = ctx.createRadialGradient(0, 0, 12, 0, 0, glowR);
-      g.addColorStop(0, `rgba(255, 206, 148, ${(0.34 + darkness * 0.22 + breath * 0.08) * dimFactor})`);
-      g.addColorStop(0.45, `rgba(204, 46, 34, ${(0.22 + darkness * 0.16) * dimFactor})`);
-      g.addColorStop(1, 'rgba(204, 46, 34, 0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(0, 0, glowR, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (!secured) {
-      drawInkWashBlot(ctx, 0, 0, 86, 86, 0.58, '7, 8, 9');
-    }
+    const glowR = (128 + darkness * 44 + breath * 14) * (0.76 + dimFactor * 0.24);
+    const g = ctx.createRadialGradient(0, 0, 12, 0, 0, glowR);
+    g.addColorStop(0, `rgba(255, 206, 148, ${(0.34 + darkness * 0.22 + breath * 0.08) * dimFactor})`);
+    g.addColorStop(0.45, `rgba(204, 46, 34, ${(0.22 + darkness * 0.16) * dimFactor})`);
+    g.addColorStop(1, 'rgba(204, 46, 34, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+    ctx.fill();
 
     const bodyGrad = ctx.createRadialGradient(0, -4, 4, 0, 0, 44);
-    if (off) {
-      bodyGrad.addColorStop(0, secured ? '#45433f' : '#3a2928');
-      bodyGrad.addColorStop(0.7, secured ? '#262625' : '#1f191a');
-      bodyGrad.addColorStop(1, '#100f10');
-    } else {
-      bodyGrad.addColorStop(0, dimFactor < 0.65 ? '#e4a472' : '#ffe8be');
-      bodyGrad.addColorStop(0.45, '#d64532');
-      bodyGrad.addColorStop(0.85, '#9b2019');
-      bodyGrad.addColorStop(1, '#581210');
-    }
+    bodyGrad.addColorStop(0, dimFactor < 0.65 ? '#e4a472' : '#ffe8be');
+    bodyGrad.addColorStop(0.45, '#d64532');
+    bodyGrad.addColorStop(0.85, '#9b2019');
+    bodyGrad.addColorStop(1, '#581210');
 
     ctx.fillStyle = bodyGrad;
     ctx.strokeStyle = INK;
@@ -849,7 +815,7 @@ export function drawHangingLanterns(ctx: CanvasRenderingContext2D, env: EnvDrawS
     ctx.fill();
     ctx.stroke();
 
-    ctx.strokeStyle = off ? 'rgba(14, 12, 12, 0.78)' : 'rgba(66, 14, 12, 0.68)';
+    ctx.strokeStyle = 'rgba(66, 14, 12, 0.68)';
     ctx.lineWidth = 1.5;
     for (const rx of [-22, 0, 22]) {
       ctx.beginPath();
@@ -860,31 +826,18 @@ export function drawHangingLanterns(ctx: CanvasRenderingContext2D, env: EnvDrawS
     inkRect(ctx, -18, -39, 36, 9, '#191716', 2.0);
     inkRect(ctx, -15, 31, 30, 8, '#191716', 2.0);
 
-    if (!off) {
-      ctx.fillStyle = 'rgba(54, 12, 10, 0.66)';
-      ctx.font = '700 18px "Songti SC","STSong",serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(idx === 0 ? '纸' : idx === 1 ? '火' : '安', 0, 1);
-    }
-
-    if (secured) {
-      ctx.save();
-      ctx.rotate(-0.22);
-      inkRect(ctx, -46, -8, 92, 16, '#f4ecdc', 2.0);
-      inkLine(ctx, -38, 0, 38, 0, 1.4, CINNABAR);
-      drawRedSeal(ctx, 0, 0, 13, '定');
-      ctx.restore();
-    } else if (off) {
-      drawComicSfx(ctx, '滋…', 56, -26, 17, 0.68, 'crimson', 0.12);
-    }
+    ctx.fillStyle = 'rgba(54, 12, 10, 0.72)';
+    ctx.font = '700 20px "Songti SC","STSong",serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.label, 0, 1);
 
     const tasselSway = -sway * 1.4;
     ctx.save();
     ctx.translate(0, 39);
     ctx.rotate(tasselSway);
-    inkLine(ctx, 0, 0, 0, 12, 2.2, off ? '#3a2d2c' : CINNABAR);
-    inkPoly(ctx, [[-4, 12], [4, 12], [8, 42], [-8, 42]], off ? '#2d2222' : CINNABAR, 1.9);
+    inkLine(ctx, 0, 0, 0, 12, 2.2, CINNABAR);
+    inkPoly(ctx, [[-4, 12], [4, 12], [8, 42], [-8, 42]], CINNABAR, 1.9);
     ctx.restore();
 
     ctx.restore();
@@ -944,7 +897,10 @@ export function drawCounterAndProps(ctx: CanvasRenderingContext2D, env: EnvDrawS
   drawPaperAndTalismansProp(ctx, 908, 562, state, darkness, highlightedKey === 'paper', seconds, slow);
 
   // 6. 老剪刀与朱砂砚台 (一点朱砂砚台)
-  drawCraftTools(ctx, 1086, 566, darkness);
+  drawCraftTools(ctx, 1048, 566, darkness);
+
+  // 7. 柜台「平安蜡烛」— Hotspot 'lamp'（可点击封烛 / 护烛 / 定火）
+  drawPeaceCandleProp(ctx, 1218, 558, env);
 }
 
 function drawIncenseBurner(ctx: CanvasRenderingContext2D, x: number, y: number, env: EnvDrawState) {
@@ -1247,6 +1203,216 @@ function drawCraftTools(ctx: CanvasRenderingContext2D, x: number, y: number, dar
   ctx.arc(54, -14, 6, 0, Math.PI * 2);
   ctx.arc(62, 14, 6, 0, Math.PI * 2);
   ctx.stroke();
+
+  ctx.restore();
+}
+
+/** 柜台「平安蜡烛」：黄铜烛台 + 朱砂平安粗蜡 + 摇曳烛火 / D3 熄烛青烟 / 窄纸带封烛 */
+function drawPeaceCandleProp(ctx: CanvasRenderingContext2D, x: number, y: number, env: EnvDrawState) {
+  const { third, steps, darkness, seconds, slow, highlightedKey, eerie } = env;
+  const off = third;
+  const secured = off && steps.includes('lamp');
+  const dimFactor = 1 - eerie.lanternDim;
+  const breath = slow ? 0 : Math.sin(seconds * 3.1) * 0.08 + Math.cos(seconds * 5.7) * 0.04;
+  const windLean = slow ? 0 : Math.sin(seconds * 2.2) * 2.2 + eerie.windGust * 14;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  if (highlightedKey === 'lamp') {
+    drawHighlightAura(ctx, 0, -28, 60, 72, slow ? 0.5 : 0.5 + 0.5 * Math.sin(seconds * 3.5), true);
+  }
+
+  // Warm radial glow pool across the counter when lit
+  if (!off) {
+    const glowR = (106 + darkness * 46 + breath * 14) * (0.78 + dimFactor * 0.22);
+    const glow = ctx.createRadialGradient(windLean * 0.35, -72, 6, 0, -56, glowR);
+    glow.addColorStop(0, `rgba(255, 224, 158, ${(0.36 + darkness * 0.24 + breath * 0.08) * dimFactor})`);
+    glow.addColorStop(0.42, `rgba(218, 72, 42, ${(0.2 + darkness * 0.16) * dimFactor})`);
+    glow.addColorStop(1, 'rgba(204, 46, 34, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, -56, glowR, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (!secured) {
+    drawInkWashBlot(ctx, 0, -34, 72, 74, 0.48, '8, 10, 12');
+  }
+
+  // Ground shadow on wooden counter
+  ctx.fillStyle = 'rgba(10, 9, 9, 0.46)';
+  ctx.beginPath();
+  ctx.ellipse(2, 12, 34, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Brass finger-loop handle on right of saucer (黄铜烛台提环)
+  const brassBase = lerpColor('#8b6b3a', '#4a3921', darkness);
+  const brassHi = lerpColor('#c9a45f', '#785e33', darkness);
+  ctx.save();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 5.4;
+  ctx.beginPath();
+  ctx.arc(31, 4, 9, -Math.PI * 0.65, Math.PI * 0.65);
+  ctx.stroke();
+  ctx.strokeStyle = brassHi;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.arc(31, 4, 9, -Math.PI * 0.65, Math.PI * 0.65);
+  ctx.stroke();
+  ctx.restore();
+
+  // Brass saucer candlestick dish (黄铜荷叶烛盘)
+  ctx.fillStyle = brassBase;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.ellipse(0, 7, 31, 10.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = brassHi;
+  ctx.beginPath();
+  ctx.ellipse(0, 4.5, 25, 7.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Short brass collar cup holding candle
+  inkPoly(
+    ctx,
+    [
+      [-15, 4],
+      [-17, -6],
+      [17, -6],
+      [15, 4]
+    ],
+    brassBase,
+    2.0
+  );
+
+  // Melted cinnabar wax pool inside dish
+  ctx.fillStyle = off ? '#4a2626' : '#a9261d';
+  ctx.beginPath();
+  ctx.ellipse(-7, 5, 8, 2.8, 0.1, 0, Math.PI * 2);
+  ctx.ellipse(9, 6, 6, 2.2, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Thick cinnabar pillar candle body (朱砂平安粗蜡)
+  const candleGrad = ctx.createLinearGradient(-13, -36, 13, -36);
+  if (off) {
+    candleGrad.addColorStop(0, secured ? '#4c4642' : '#4a2e2d');
+    candleGrad.addColorStop(0.45, secured ? '#615a53' : '#5e3432');
+    candleGrad.addColorStop(1, '#261a1a');
+  } else {
+    candleGrad.addColorStop(0, '#8d1d17');
+    candleGrad.addColorStop(0.36, '#df4833');
+    candleGrad.addColorStop(0.7, '#ba281e');
+    candleGrad.addColorStop(1, '#681511');
+  }
+
+  ctx.fillStyle = candleGrad;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(-12.5, -5);
+  ctx.lineTo(-11.5, -58);
+  ctx.quadraticCurveTo(0, -63, 11.5, -58);
+  ctx.lineTo(12.5, -5);
+  ctx.quadraticCurveTo(0, -1, -12.5, -5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Wax top rim depression + organic wax tears
+  ctx.fillStyle = off ? '#332222' : '#f29f74';
+  ctx.beginPath();
+  ctx.ellipse(0, -58, 11, 3.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Melted wax drips along upper edge
+  ctx.fillStyle = off ? '#5a3533' : '#e45c44';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-10, -56);
+  ctx.quadraticCurveTo(-9, -42, -7.5, -40);
+  ctx.quadraticCurveTo(-5.5, -42, -5.8, -55);
+  ctx.moveTo(6.5, -56);
+  ctx.quadraticCurveTo(7.4, -47, 9, -46);
+  ctx.quadraticCurveTo(10.5, -48, 10.2, -56);
+  ctx.fill();
+  ctx.stroke();
+
+  // Vertical gold-ink「平安」calligraphy on the candle body
+  ctx.save();
+  ctx.fillStyle = off ? 'rgba(218, 204, 178, 0.56)' : 'rgba(255, 236, 184, 0.92)';
+  ctx.font = '700 13px "Songti SC","STSong",serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('平', 0, -40);
+  ctx.fillText('安', 0, -23);
+  ctx.restore();
+
+  // Black wick
+  inkLine(ctx, 0, -58, windLean * 0.08, -68, 2.2, '#171413');
+
+  if (!off) {
+    // Flickering teardrop candle flame
+    const tipX = windLean;
+    const flameH = (26 + breath * 10) * (0.8 + dimFactor * 0.2);
+    const flameW = 8.4 + breath * 1.4;
+
+    ctx.save();
+    // Outer cinnabar-amber flame
+    const flameGrad = ctx.createLinearGradient(0, -66, tipX, -66 - flameH);
+    flameGrad.addColorStop(0, '#ff8e3c');
+    flameGrad.addColorStop(0.5, '#ffca57');
+    flameGrad.addColorStop(1, '#fff6d1');
+    ctx.fillStyle = flameGrad;
+    ctx.strokeStyle = 'rgba(138, 28, 18, 0.78)';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(0, -65);
+    ctx.bezierCurveTo(-flameW, -71, -flameW * 0.72 + tipX * 0.4, -67 - flameH * 0.62, tipX, -66 - flameH);
+    ctx.bezierCurveTo(flameW * 0.72 + tipX * 0.4, -67 - flameH * 0.62, flameW, -71, 0, -65);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner white-gold core
+    ctx.fillStyle = '#fffdf0';
+    ctx.beginPath();
+    ctx.ellipse(tipX * 0.16, -73, 3.2, 6.2, tipX * 0.02, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else if (secured) {
+    // Narrow paper strip wrapped & sealed across the Peace Candle (窄纸带封平安烛)
+    ctx.save();
+    ctx.translate(0, -36);
+    ctx.rotate(-0.24);
+    inkRect(ctx, -25, -7, 50, 14, '#f4ecdc', 1.9);
+    inkLine(ctx, -20, 0, 20, 0, 1.3, CINNABAR);
+    drawRedSeal(ctx, 0, 0, 12, '定');
+    ctx.restore();
+  } else {
+    // Unlit smoking wick during D3 crisis + crimson SFX
+    for (let i = 0; i < 2; i++) {
+      const t = slow ? 0.35 + i * 0.35 : (seconds * 0.42 + i * 0.5) % 1;
+      const alpha = Math.sin(t * Math.PI) * 0.56;
+      const sx = Math.sin(t * 6.5 + i * 2.1) * 7 + eerie.windGust * 26 * t;
+      const sy = -70 - t * 62;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#cfd6d4';
+      ctx.lineWidth = 2.2 + t * 3.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, -68);
+      ctx.quadraticCurveTo(sx - 6, sy + 20, sx, sy);
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawComicSfx(ctx, '滋…', 34, -76, 16, 0.76, 'crimson', 0.12);
+  }
 
   ctx.restore();
 }

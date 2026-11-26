@@ -80,7 +80,7 @@ const PROLOGUE_BEATS: PrologueBeat[] = [
     speaker: '纸火经营系统',
     speakerKind: 'system',
     lines: [
-      '朱砂印落定在日账扉页，头顶三盏红灯笼渐次转暖，窗外冷雾退成晨光。',
+      '朱砂印落定在日账扉页，头顶「纸」「火」两盏红灯笼与柜台平安蜡烛渐次转暖，窗外冷雾退成晨光。',
       '「十五日试用期现已开启。守住禁忌、压稳阴气、备足口粮（按 S 可随时兑换生存物资）——祝你在这座诡异小镇里，活到终审。」'
     ],
     sfx: 'stamp',
@@ -379,12 +379,11 @@ function drawBeat2AwakenInShop(
   ctx.textBaseline = 'middle';
   ctx.fillText('纸  马  纸  扎', 480, 43);
 
-  // Three swaying red lanterns
-  for (const [lx, ly, idx] of [
-    [220, 118, 0],
-    [480, 132, 1],
-    [740, 118, 2]
-  ]) {
+  // Two swaying red lanterns flanking both sides (纸 / 火)
+  for (const [lx, ly, idx, label] of [
+    [210, 120, 0, '纸'],
+    [750, 120, 1, '火']
+  ] as Array<[number, number, number, string]>) {
     const sw = Math.sin(t * 1.4 + idx) * 5;
     inkLine(ctx, lx, 0, lx + sw, ly - 24, 2, INK);
     drawInkWashBlot(ctx, lx + sw, ly, 68, 68, 0.34, '204, 46, 34');
@@ -395,6 +394,11 @@ function drawBeat2AwakenInShop(
     ctx.ellipse(lx + sw, ly, 30, 24, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    ctx.fillStyle = 'rgba(54, 12, 10, 0.72)';
+    ctx.font = '700 16px "Songti SC","STSong",serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, lx + sw, ly + 1);
     inkLine(ctx, lx + sw, ly + 24, lx + sw, ly + 52, 3, CINNABAR);
   }
 

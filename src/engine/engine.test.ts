@@ -921,4 +921,47 @@ describe('Paperfire D1–D15 Engine (P0/P1/P2 Full Suite)', () => {
     expect(st.bookstoreVisitsTotal).toBe(2);
     expect(st.unlockedIntelIds?.length).toBe(1);
   });
+
+  it('spawns all 6 viral eerie guests on scheduled nights and completes signature tactics with unique tokens', () => {
+    const cases: Array<{ day: number; orderId: string; tacticId: string; tokenId: string; bonusPts?: number }> = [
+      { day: 2, orderId: 'n_vir_courier', tacticId: 'vir-five-star', tokenId: 'courier_receipt' },
+      { day: 4, orderId: 'n_vir_surgeon', tacticId: 'vir-refuse-pill', tokenId: 'ward_badge' },
+      { day: 7, orderId: 'n_vir_senior', tacticId: 'vir-listen-elegy', tokenId: 'elegy_score' },
+      { day: 8, orderId: 'n_vir_zodiac_goat', tacticId: 'vir-rule-bet', tokenId: 'zodiac_chip', bonusPts: 6 },
+      { day: 9, orderId: 'n_vir_jester', tacticId: 'vir-counter-bluff', tokenId: 'red_zhong_die', bonusPts: 8 },
+      { day: 12, orderId: 'n_vir_puppets', tacticId: 'vir-cut-echo', tokenId: 'puppet_cross' }
+    ];
+
+    for (const c of cases) {
+      const st = createRun(c.day === 8 ? 'd8_viral' : 'd1_full');
+      st.day = c.day;
+      st.s = 8;
+      st.c = 8;
+      st.h = 4;
+      flipToNight(st);
+      expect(st.todayNightOrders).toContain(c.orderId);
+
+      // Select & finish 3-beat dialogue, then enter site
+      getStageView(st, () => {}).moves.find((m) => m.id === `pick_night_${c.orderId}`)!.run();
+      st.dialogueStep = 2;
+      getStageView(st, () => {}).moves.find((m) => m.id === `accept_night_${c.orderId}`)!.run();
+      expect(st.phase).toBe('site');
+
+      const ptsBefore = st.pts;
+      const tactic = getStageView(st, () => {}).moves.find((m) => m.id === c.tacticId);
+      expect(tactic, `Missing signature move ${c.tacticId} for ${c.orderId}`).toBeDefined();
+      tactic!.run();
+      if (c.bonusPts) {
+        expect(st.pts).toBe(ptsBefore + c.bonusPts);
+      }
+
+      getStageView(st, () => {}).moves.find((m) => m.id === 'rite-orthodox')!.run();
+      expect(st.threat).toBe(0);
+      getStageView(st, () => {}).moves.find((m) => m.id === 'seal')!.run();
+
+      expect(st.phase).toBe('settle');
+      expect(st.outcomes[c.day]).toBe('success');
+      expect(st.tokens.some((t) => t.id === c.tokenId)).toBe(true);
+    }
+  });
 });

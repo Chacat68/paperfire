@@ -237,14 +237,14 @@ export function buildSiteMoves(state: GameState): ActionOption[] {
       ),
       siteAction(
         'calm-flame',
-        '定住铺里三盏灯火',
+        '定住柜台平安烛火',
         '洁净 −1 · 局面 −2',
         () => {
           state.c -= 1;
-          recordStep('calm_flame', '灯芯剪齐，三盏朱砂红灯稳稳亮着。', 2);
+          recordStep('calm_flame', '蜡芯剪齐，柜台平安蜡烛与檐下「纸」「火」双红灯一齐稳亮。', 2);
         },
         has('calm_flame')
-          ? '灯火已稳'
+          ? '烛火已稳'
           : !has('audit_ledger')
             ? '先摊账对簿'
             : state.c < reqC
@@ -320,13 +320,13 @@ export function buildSiteMoves(state: GameState): ActionOption[] {
     moves = [
       siteAction(
         'peak-trim-lamps',
-        '挑亮前两盏朱砂长明灯',
-        '洁净 −1 · 局面 −2（护灯抗神威，后续正统仪轨免阴气反噬）',
+        '挑亮平安烛与双红灯',
+        '洁净 −1 · 局面 −2（护火抗神威，后续正统仪轨免阴气反噬）',
         () => {
           state.c -= 1;
-          recordStep('lamps_lit', '你稳手挑亮前两盏朱砂长明灯，火舌一涨，硬生生顶住门外百戏神威。', 2);
+          recordStep('lamps_lit', '你稳手挑亮柜台平安蜡烛与门楣「纸」「火」双灯，火舌一涨，硬生生顶住门外百戏神威。', 2);
         },
-        has('lamps_lit') ? '前两红灯已稳亮' : state.c < reqLampC ? `洁净至少需要 ${reqLampC}` : ''
+        has('lamps_lit') ? '平安烛与双红灯已稳亮' : state.c < reqLampC ? `洁净至少需要 ${reqLampC}` : ''
       ),
       siteAction(
         'rite-orthodox',
@@ -418,11 +418,87 @@ export function buildSiteMoves(state: GameState): ActionOption[] {
       )
     ];
   } else {
-    // D7–D14 常规诡异履约（正统/歪办分流）
+    // D7–D14 常规诡异履约 + 6 位「异闻奇客」专属破局招式（正统/歪办分流）
     const mainStep = order.steps[0];
     const doneStep = order.steps[order.steps.length - 1];
     const reqC = needClean(order.peak ? 3 : 2);
+    const viralSpecialMove: ActionOption | null = (() => {
+      if (order.id === 'n_vir_courier') {
+        return siteAction(
+          'vir-five-star',
+          '奇策 · 朱砂勾五星好评',
+          '零消耗 · 局面 −2 · 阴气 −1（不窥餐箱，直接稳住 4:44 骑手）',
+          () => {
+            state.h = Math.max(0, state.h - 1);
+            recordStep('vir_tactic', '你目不斜视在湿回执上大笔勾出「★★★★★五星好评」，#444 餐箱顿时安静下来（局面 −2，阴气 −1）。', 2);
+          },
+          has('vir_tactic') ? '五星好评已勾妥' : ''
+        );
+      }
+      if (order.id === 'n_vir_surgeon') {
+        return siteAction(
+          'vir-refuse-pill',
+          '奇策 · 拒吞白药隔台验单',
+          '零消耗 · 局面 −2 · 洁净 +1（推回试吃药片，立破三号病房威压）',
+          () => {
+            state.c += 1;
+            recordStep('vir_tactic', '你用纸镊把白药片原封推回柜外，笑面诡医眯眼赞了声「警觉」，收起手术刀（局面 −2，洁净 +1）。', 2);
+          },
+          has('vir_tactic') ? '已拒药立规' : ''
+        );
+      }
+      if (order.id === 'n_vir_senior') {
+        return siteAction(
+          'vir-listen-elegy',
+          '奇策 · 闭目静听断弦终曲',
+          '零消耗 · 局面 −2 · 阴气 −1（不打断琴声，安抚四楼学姐执念）',
+          () => {
+            state.h = Math.max(0, state.h - 1);
+            recordStep('vir_tactic', '你垂眸静听完最后一节断弦安魂调，血红裙摆上的阴煞悄然化作一缕暖雾（局面 −2，阴气 −1）。', 2);
+          },
+          has('vir_tactic') ? '终曲已静听毕' : ''
+        );
+      }
+      if (order.id === 'n_vir_zodiac_goat') {
+        return siteAction(
+          'vir-rule-bet',
+          '奇策 · 按规押筹拆穿谎牌',
+          '零消耗 · 局面 −2 · 额外赢 +6 纸火点（直指猩红「谎」牌，不揭羊面）',
+          () => {
+            state.pts += 6;
+            recordStep('vir_tactic', '你稳手点破悬空的猩红「谎」牌且绝不触碰面具，「人羊」击节轻笑掷下额外 6 点纸火筹码（局面 −2，纸火点 +6）！', 2);
+          },
+          has('vir_tactic') ? '谎牌已拆穿赢筹' : ''
+        );
+      }
+      if (order.id === 'n_vir_jester') {
+        return siteAction(
+          'vir-counter-bluff',
+          '奇策 · 反将一军以假乱真',
+          '零消耗 · 局面 −2 · 反薅 +8 纸火点（戳破红中老千骰，绝不换真名）',
+          () => {
+            state.pts += 8;
+            recordStep('vir_tactic', '你一眼看穿他骨骰灌铅的把戏，顺手倒扣账本反将一军，红中客大笑认栽反赔 8 点纸火（局面 −2，纸火点 +8）！', 2);
+          },
+          has('vir_tactic') ? '已反将一军薅点' : ''
+        );
+      }
+      if (order.id === 'n_vir_puppets') {
+        return siteAction(
+          'vir-cut-echo',
+          '奇策 · 无视木偶只答执线人',
+          '零消耗 · 局面 −2 · 阴气 −1（截断腹语诱问，稳住镜廊双生煞）',
+          () => {
+            state.h = Math.max(0, state.h - 1);
+            recordStep('vir_tactic', '任凭小红木偶歪头咯咯发问，你全程只向执线人报尺核线，绷紧的朱砂丝瞬间平息（局面 −2，阴气 −1）。', 2);
+          },
+          has('vir_tactic') ? '已无视腹语定局' : ''
+        );
+      }
+      return null;
+    })();
     moves = [
+      ...(viralSpecialMove ? [viralSpecialMove] : []),
       siteAction(
         'rite-orthodox',
         `正统仪轨 · ${mainStep.label}`,
@@ -470,7 +546,7 @@ export function buildSiteMoves(state: GameState): ActionOption[] {
         markSkillUsed('ward_flame');
         state.c += 1;
         lowerThreat(2);
-        note(state, '【借火定神】你抬手引门楣三盏红灯阳火定神，诡影气焰立退两分（局面 −2，洁净 +1）！');
+        note(state, '【借火定神】你抬手引柜台平安蜡烛与檐下「纸」「火」双灯阳火定神，诡影气焰立退两分（局面 −2，洁净 +1）！');
       },
       usedSkill('ward_flame') ? '今夜已施展过「借灯定神」' : state.threat <= 0 ? '局面已稳' : ''
     );

@@ -717,6 +717,98 @@ export const CHARACTER_PROFILES: Record<string, CharacterProfile> = {
     ruleOrHabit: '【破绽】毁账熄灯等于自撤安全屋庇护，正主终审就在铺内光明合账！',
     bubbleIdentity: '自称上任老掌柜 · 密道逃生',
     bubbleTraits: ['袖落焦纸灰', '脚下渗霜', '煽动烧账熄灯']
+  },
+
+  // ===== 五、异闻奇客（热门诡异短剧/规则怪谈/民俗惊悚特邀角色） =====
+  midnight_courier: {
+    id: 'midnight_courier',
+    name: '4:44 诡异外卖员',
+    title: '【异闻奇客】黄泉加急骑手 · 绝不差评',
+    camp: 'eerie',
+    art: 'midnight_courier',
+    sealChar: '递',
+    firstDay: 2,
+    appearance: '黑湿雨衣、红纹裂面头盔后藏着一双不眨眼的惨白瞳孔，手提标着「#444」的渗血保温箱与湿漉回执。',
+    traits: ['午夜4:44准点', '渗血#444餐箱', '绝不可给差评'],
+    bio: '穿梭于规则怪谈街巷的午夜加急骑手，专送活人不敢拆封的黄泉外卖。今夜因鞋底跑烂登门求扎纸草鞋——只要痛快勾选「五星好评」且绝口不问餐箱内容，便是最爽快的现结贵客。',
+    ruleOrHabit: '开局用「朱砂勾五星 · 封箱签收」可压局 −2 并降阴气 −1，完单获「四四四免单回执」。',
+    bubbleIdentity: '午夜4:44骑手 · 讨纸草鞋与五星',
+    bubbleTraits: ['裂纹头盔', '渗血#444箱', '严忌差评与窥箱']
+  },
+  smiling_surgeon: {
+    id: 'smiling_surgeon',
+    name: '笑面诡医',
+    title: '【异闻奇客】三号病房手术师 · 讨会呼吸的纸肺',
+    camp: 'eerie',
+    art: 'smiling_surgeon',
+    sealChar: '医',
+    firstDay: 4,
+    appearance: '溅满朱砂血点的旧白大褂、红线缝出夸张笑弧的惨白纱布口罩，一手转寒光手术刀、一手提滴黑墨的玻璃输液袋。',
+    traits: ['缝线笑口口罩', '黑墨输液袋', '忌吞白药与把脉'],
+    bio: '出自镇东废弃三号病房的诡异主刀医生，总爱夸赞活人的心跳「健康新鲜」。但它恪守买卖界限：只要你拒吞它递来的试吃白药、绝不伸腕让其把脉，隔台交付纸肺即可平安收账。',
+    ruleOrHabit: '专属招式「拒吞白药 · 隔台验单」零耗纸料压局 −2 且洁净 +1，完单赠「三号病房通行牌」。',
+    bubbleIdentity: '三号病房诡医 · 采买纸扎器官',
+    bubbleTraits: ['缝线笑口罩', '悬黑墨吊瓶', '忌吃白药与把脉']
+  },
+  crimson_senior: {
+    id: 'crimson_senior',
+    name: '血红衣学姐',
+    title: '【异闻奇客】四楼琴房残影 · 断弦安魂曲',
+    camp: 'eerie',
+    art: 'crimson_senior',
+    sealChar: '琴',
+    firstDay: 7,
+    appearance: '旧民国女校蓝襟血红裙摆、及腰黑发遮掩半张瓷白脸庞，怀抱染红《安魂曲》残谱与断弦琴弓，周身飘散水墨音符。',
+    traits: ['四楼琴房孤影', '血染断弦曲谱', '琴未停绝不打断'],
+    bio: '在废弃女校四楼琴房拉了三十年断弦曲的红衣学姐，常人闻声奔逃，唯独被纸火铺柜台上的平安烛火吸引。只要静心闭目听完终曲、献上不断弦的朱砂纸提琴，她便会柔声谢幕并涤荡铺中阴气。',
+    ruleOrHabit: '专属招式「闭目听终曲 · 献纸琴」可压局 −2 并降阴气 −1，完单获「断弦红丝谱」。',
+    bubbleIdentity: '四楼琴房学姐 · 求不断弦纸提琴',
+    bubbleTraits: ['蓝襟血红裙', '抱染红曲谱', '曲未终忌打断']
+  },
+  zodiac_goat: {
+    id: 'zodiac_goat',
+    name: '生肖面具官 · 「人羊」',
+    title: '【异闻奇客】十日规则裁判 · 谎牌博弈',
+    camp: 'eerie',
+    art: 'zodiac_goat',
+    sealChar: '羊',
+    firstDay: 8,
+    appearance: '剪裁凌厉的玄墨立领长风衣、苍白骨质双角山羊面具配金色「羊」额印与朱红眼缝，指尖悬着黄铜怀表与「谎/真/命」三张血牌。',
+    traits: ['双角骨质羊面', '黄铜怀表倒计时', '严忌揭面具'],
+    bio: '游走于生死规则游戏间的十二生肖面具裁判，最欣赏能在诡异规则夹缝中冷静谋生的纸火掌柜。登门邀你扎一尊「听规纸裁判」并拆穿谎牌，赢下对弈可获重金、巨额纸火点与「十二生肖铜筹」。',
+    ruleOrHabit: '专属招式「按规押筹 · 拆穿谎牌」压局 −2 并额外赢得 +6 纸火点；切忌伸手揭其羊面！',
+    bubbleIdentity: '十二生肖裁判 · 「人羊」面具官',
+    bubbleTraits: ['双角羊面具', '持谎/真/命三牌', '严忌揭开面具']
+  },
+  zuowang_jester: {
+    id: 'zuowang_jester',
+    name: '坐忘红中客',
+    title: '【异闻奇客】倒悬骰子戏子 · 骗天骗地',
+    camp: 'eerie',
+    art: 'zuowang_jester',
+    sealChar: '中',
+    firstDay: 9,
+    appearance: '水墨朱砂补丁破道袍、脸上歪扣惨白麻将「红中」面具，面具底缘露出癫狂森白笑牙，身侧三颗白骨骰与破「骗」幡凭空旋转。',
+    traits: ['麻将红中面具', '十句十一假', '忌信发誓与换名'],
+    bio: '嘴里没有一句实话的疯批游方诡，自称刚把老天爷骗急了眼，急需一尊无名纸替身顶锅。只要不被他的狂言忽悠、绝不写上真名，反将他一军还能狠狠反薅一笔可观的纸火点。',
+    ruleOrHabit: '专属招式「反将一军 · 以假乱真」压局 −2 并额外反薅 +8 纸火点，完单赠「红中老千骰」。',
+    bubbleIdentity: '坐忘道红中戏子 · 耍骨骰讨替身',
+    bubbleTraits: ['歪戴红中面具', '悬三颗骨骰', '忌信发誓与换名']
+  },
+  puppet_twins: {
+    id: 'puppet_twins',
+    name: '双生提线木偶师',
+    title: '【异闻奇客】镜廊腹语双生 · 换朱砂提线',
+    camp: 'eerie',
+    art: 'puppet_twins',
+    sealChar: '偶',
+    firstDay: 12,
+    appearance: '修长苍白黑礼服执线师高举木质十字架，绷紧的朱砂细丝连着臂弯里咧嘴歪头的朱砂小红纸木偶，木偶颈关节可拧转九十度。',
+    traits: ['十字提线木架', '腹语小红木偶', '绝不答木偶问话'],
+    bio: '从诡异镜廊踏出的双生提线客：优雅疲惫的执线师与恶趣味十足的腹语小红偶彼此牵制。交易时小红偶会不断用童音挑衅搭话——只要全程无视木偶、只与执线人换妥朱砂韧纸线即可稳收厚酬。',
+    ruleOrHabit: '专属招式「只答执线人 · 换朱砂线」压局 −2 并降阴气 −1，完单赠「双生提线木栓」。',
+    bubbleIdentity: '镜廊提线师 · 怀抱腹语小红偶',
+    bubbleTraits: ['高举提线木架', '红偶歪头搭话', '严忌回答木偶']
   }
 };
 
@@ -759,7 +851,13 @@ const NIGHT_ORDER_CHAR_MAP: Record<string, string> = {
   n12_drowned_ferry: 'ferry_ghost',
   n13_peak_empty_chair: 'opera_ghost',
   n14_quiet_borrower: 'paper_boy',
-  n15_final_ledger: 'final_auditor'
+  n15_final_ledger: 'final_auditor',
+  n_vir_courier: 'midnight_courier',
+  n_vir_surgeon: 'smiling_surgeon',
+  n_vir_senior: 'crimson_senior',
+  n_vir_zodiac_goat: 'zodiac_goat',
+  n_vir_jester: 'zuowang_jester',
+  n_vir_puppets: 'puppet_twins'
 };
 
 export function getCharacterForDayOrder(order: DayOrderDef): CharacterProfile {

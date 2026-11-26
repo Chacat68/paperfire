@@ -20,6 +20,14 @@ import {
   drawTailorGhostGuest,
   drawTempleDeityGuest
 } from './specialGuests';
+import {
+  drawCrimsonSeniorGuest,
+  drawMidnightCourierGuest,
+  drawPuppetTwinsGuest,
+  drawSmilingSurgeonGuest,
+  drawZodiacGoatGuest,
+  drawZuowangJesterGuest
+} from './popularGuests';
 
 export interface PaperDollDrawOpts {
   x: number;
@@ -587,7 +595,13 @@ export type GuestVariant =
   | 'tailor_ghost'
   | 'ash_collector'
   | 'temple_deity'
-  | 'opera_ghost';
+  | 'opera_ghost'
+  | 'zodiac_goat'
+  | 'midnight_courier'
+  | 'smiling_surgeon'
+  | 'crimson_senior'
+  | 'zuowang_jester'
+  | 'puppet_twins';
 
 export interface GuestDrawOpts {
   variant: GuestVariant;
@@ -686,6 +700,38 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
   }
   if (variant === 'lantern_child') {
     drawLanternChildGuest(ctx, breath, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+
+  // 6 位「异闻奇客」热门诡异短剧/小说角色专属精绘通道
+  if (variant === 'zodiac_goat') {
+    drawZodiacGoatGuest(ctx, breath, armRaised, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+  if (variant === 'midnight_courier') {
+    drawMidnightCourierGuest(ctx, breath, armRaised, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+  if (variant === 'smiling_surgeon') {
+    drawSmilingSurgeonGuest(ctx, breath, armRaised, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+  if (variant === 'crimson_senior') {
+    drawCrimsonSeniorGuest(ctx, breath, armRaised, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+  if (variant === 'zuowang_jester') {
+    drawZuowangJesterGuest(ctx, breath, armRaised, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+  if (variant === 'puppet_twins') {
+    drawPuppetTwinsGuest(ctx, breath, armRaised, seconds, slow, patterns);
     ctx.restore();
     return;
   }

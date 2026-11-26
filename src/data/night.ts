@@ -1,7 +1,8 @@
 import type { NightOrderDef } from './types';
 import { NIGHT_TRAP_ORDERS, getScheduledTrapOrder } from './nightTraps';
+import { POPULAR_NIGHT_ORDERS, getScheduledViralNightOrder } from './popularNightOrders';
 
-export { NIGHT_TRAP_ORDERS, getScheduledTrapOrder };
+export { NIGHT_TRAP_ORDERS, POPULAR_NIGHT_ORDERS, getScheduledTrapOrder, getScheduledViralNightOrder };
 
 export const DAY_META: Record<
   number,
@@ -115,6 +116,7 @@ export const DAY_META: Record<
 };
 
 export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
+  ...POPULAR_NIGHT_ORDERS,
   n1_alley_sendoff: {
     id: 'n1_alley_sendoff',
     day: 1,
@@ -854,12 +856,17 @@ export function getScheduledNightOrder(day: number, h: number): NightOrderDef {
 }
 
 /**
- * 生成今夜夜账单列表（正规诡异单 + 暗藏的诱杀诡异单）。
+ * 生成今夜夜账单列表（正规诡异单 + 暗藏的诱杀诡异单 + 特定夜登门的「奇诡特邀」异闻奇客）。
  * 按单双/周期交错排位，不固定把陷阱放在第二个，让玩家必须听完角色讲述再判断！
  */
 export function buildTonightNightOrders(day: number, h: number): string[] {
   const realOrder = getScheduledNightOrder(day, h);
   const trapOrder = getScheduledTrapOrder(day);
+  const viralOrder = getScheduledViralNightOrder(day);
   const trapFirst = day === 2 || day === 4 || day === 6 || day === 9 || day === 12 || day === 14;
-  return trapFirst ? [trapOrder.id, realOrder.id] : [realOrder.id, trapOrder.id];
+  const base = trapFirst ? [trapOrder.id, realOrder.id] : [realOrder.id, trapOrder.id];
+  if (viralOrder) {
+    base.push(viralOrder.id);
+  }
+  return base;
 }

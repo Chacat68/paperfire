@@ -124,16 +124,18 @@ export function createComic2DScene(
     {
       key: 'lamp',
       mode: 'shop',
-      plane: 'mid',
-      x: 1012,
-      y: 216,
-      rx: 68,
-      ry: 78,
+      plane: 'front',
+      x: 1218,
+      y: 526,
+      rx: 58,
+      ry: 72,
+      markerY: 454,
       choices: [
-        ['use-strip', '用纸带封灯'],
-        ['guard', '请阿杰守灯'],
-        ['peak-trim-lamps', '挑亮前两红灯'],
-        ['calm-flame', '定住灯火']
+        ['use-strip', '纸带封平安烛'],
+        ['guard', '请阿杰守平安烛'],
+        ['peak-trim-lamps', '挑亮平安烛火'],
+        ['calm-flame', '定住平安烛火'],
+        ['skill-ward-flame', '借平安烛定神']
       ]
     },
     {
@@ -160,6 +162,8 @@ export function createComic2DScene(
       choices: [
         ['place-horse', '摆正纸马'],
         ['peak-veil-ward', '挂红帐隔目'],
+        ['vir-refuse-pill', '拒吞白药'],
+        ['vir-cut-echo', '换朱砂提线'],
         ['rite-orthodox', '正统仪轨'],
         ['use-ward-doll', '护身替纸人'],
         ['use-talisman', '安神纸符'],
@@ -218,6 +222,10 @@ export function createComic2DScene(
       choices: [
         ['audit-ledger', '摊账对簿'],
         ['peak-avert-chair', '掩目不数人'],
+        ['vir-five-star', '勾五星好评'],
+        ['vir-rule-bet', '拆穿谎牌'],
+        ['vir-counter-bluff', '反将一军'],
+        ['vir-listen-elegy', '静听终曲'],
         ['pick_d2_wu_cleanse', '接净宅单'],
         ['pick_d1_chen_white', '陈婶白事单'],
         ['pick_d3_chen_horse', '补做纸马'],
@@ -634,13 +642,8 @@ export function createComic2DScene(
         if (!target.marker.hidden) target.marker.hidden = true;
         continue;
       }
-      const anchorX = target.key === 'lamp' ? target.x + 12 : target.x;
-      const anchorY =
-        target.markerY !== undefined
-          ? target.markerY
-          : target.key === 'lamp'
-            ? target.y - target.ry * 0.62
-            : target.y - target.ry * 0.42;
+      const anchorX = target.x;
+      const anchorY = target.markerY !== undefined ? target.markerY : target.y - target.ry * 0.42;
       const [x, y] = stageToScreen(anchorX, anchorY, target.plane);
       if (x < 0 || x > width || y < topSafe || y > deckTop - 22) {
         if (!target.marker.hidden) target.marker.hidden = true;
@@ -937,7 +940,7 @@ export function createComic2DScene(
         drawShopBackdrop(ctx, envState);
       });
 
-      // Plane 2 (Mid): Guests, Paper Doll / Paper Horse, Three Hanging Silk Lanterns
+      // Plane 2 (Mid): Guests, Paper Doll / Paper Horse, Two Hanging Silk Lanterns (纸 / 火)
       drawPlane('mid', () => {
         const guestVariant = resolveGuestVariant(gameState!, night);
         if (guestVariant && guestAlpha > 0.02) {

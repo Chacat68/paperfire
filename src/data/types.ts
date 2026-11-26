@@ -11,6 +11,7 @@ export type ScenarioId =
   | 'd4_empty'
   | 'd5_pressure'
   | 'd6_peak'
+  | 'd8_viral'
   | 'd10_temple'
   | 'd15_final';
 
@@ -65,7 +66,13 @@ export type EerieGuestArt =
   | 'ash_collector'
   | 'temple_deity'
   | 'opera_ghost'
-  | 'night_auntie';
+  | 'night_auntie'
+  | 'zodiac_goat'
+  | 'midnight_courier'
+  | 'smiling_surgeon'
+  | 'crimson_senior'
+  | 'zuowang_jester'
+  | 'puppet_twins';
 
 export type CharacterCamp = 'resident' | 'living' | 'eerie' | 'trap';
 
@@ -143,6 +150,7 @@ export interface NightOrderDef {
   risk: number;
   turns: number;
   peak?: boolean;
+  specialViral?: boolean;
   watched?: boolean;
   promisedKey?: 'wu_d2';
   guestArt: EerieGuestArt;
