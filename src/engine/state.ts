@@ -1,9 +1,18 @@
 import { DAY_ORDERS } from '../data/orders';
 import { buildDailyQuests } from '../data/systemShop';
-import type { GameState, ScenarioId } from '../data/types';
+import type { GameState, Phase, ScenarioId, SkillId, VisitRecord } from '../data/types';
 import { snapshotDayStart } from './systemEngine';
 
-export const STORAGE_KEY = 'paperfire-v3-run';
+export const STORAGE_KEY = 'paperfire-v4-run';
+export const LEGACY_STORAGE_KEY = 'paperfire-v3-run';
+export const DAY_DURATION_SEC = 180; // 白天倒计时 03:00（卯时 06:00 → 酉时 18:00）
+export const NIGHT_DURATION_SEC = 150; // 夜晚倒计时 02:30（酉时 18:30 → 卯时 06:00）
+
+export function getPhaseDurationSec(phase: Phase): number {
+  if (phase === 'day') return DAY_DURATION_SEC;
+  if (phase === 'board' || phase === 'site') return NIGHT_DURATION_SEC;
+  return 0;
+}
 
 export const OUTCOME_LABELS: Record<string, string> = {
   success: '已交付',
@@ -17,6 +26,25 @@ export const OUTCOME_LABELS: Record<string, string> = {
 export function note(state: GameState, text: string): void {
   state.message = text;
   state.log.push(`D${state.day} · ${text}`);
+}
+
+export function markCharacterMet(state: GameState, characterId: string): void {
+  state.metCharacterIds ??= ['liu_tailor', 'helper_xiaoshuan', 'paper_boy'];
+  if (!state.metCharacterIds.includes(characterId)) {
+    state.metCharacterIds.push(characterId);
+  }
+}
+
+export function recordVisit(state: GameState, entry: Omit<VisitRecord, 'id'>): void {
+  state.visitRecords ??= [];
+  state.visitRecords.push({
+    ...entry,
+    id: `v_${state.day}_${state.visitRecords.length + 1}_${entry.orderId}`
+  });
+}
+
+export function hasSkill(state: GameState, skillId: SkillId): boolean {
+  return Boolean(state.learnedSkills?.includes(skillId));
 }
 
 export function refreshDayOrders(state: GameState): void {
@@ -54,6 +82,7 @@ export function createRun(mode: ScenarioId = 'd1_full'): GameState {
     day: 1,
     maxDay: 15,
     phase: 'day',
+    phaseRemainingSec: DAY_DURATION_SEC,
     dayTab: 'orders',
     selectedOrderId: null,
     selectedNightOrderId: null,
@@ -119,6 +148,18 @@ export function createRun(mode: ScenarioId = 'd1_full'): GameState {
     lastSettleSummary: '',
     badEndReason: '',
     lastDaySnapshot: null,
+    metCharacterIds: ['liu_tailor', 'helper_xiaoshuan', 'paper_boy'],
+    visitRecords: [],
+    scannedTrapDays: [],
+    forecastDays: [],
+    unlockedIntelIds: [],
+    claimedCodexMilestones: [],
+    learnedSkills: [],
+    skillUsesTonight: [],
+    craftOrderCounter: 0,
+    streetZone: 'front',
+    streetVisitedToday: [],
+    bookstoreVisitsTotal: 0,
     log: [],
     message: '【系统提示】已接入诡异小镇纸扎铺。白天满足活人需求，晚上满足诡异需求，赚取纸火点兑换生存口粮。'
   };
@@ -302,9 +343,25 @@ export function createRun(mode: ScenarioId = 'd1_full'): GameState {
   return run;
 }
 
+function readSavedRaw(): string | null {
+  try {
+    const v4 = localStorage.getItem(STORAGE_KEY);
+    if (v4) return v4;
+    const legacyLocal = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacyLocal) return legacyLocal;
+  } catch {
+    // ignore localStorage errors
+  }
+  try {
+    return sessionStorage.getItem(LEGACY_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function loadRun(): GameState {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = readSavedRaw();
     if (raw) {
       const parsed = JSON.parse(raw) as GameState;
       const phases = new Set(['day', 'board', 'site', 'settle', 'end', 'bad_end']);
@@ -325,7 +382,25 @@ export function loadRun(): GameState {
         parsed.restNextNight ??= false;
         parsed.settleChoreDone ??= false;
         parsed.settleChosenId ??= null;
-        if (parsed.dayTab === 'shop') parsed.dayTab = 'orders';
+        parsed.metCharacterIds ??= ['liu_tailor', 'helper_xiaoshuan', 'paper_boy'];
+        parsed.visitRecords ??= [];
+        parsed.scannedTrapDays ??= [];
+        parsed.forecastDays ??= [];
+        parsed.unlockedIntelIds ??= [];
+        parsed.claimedCodexMilestones ??= [];
+        parsed.learnedSkills ??= [];
+        parsed.skillUsesTonight ??= [];
+        parsed.craftOrderCounter ??= 0;
+        parsed.streetZone = parsed.streetZone === 'back' ? 'back' : 'front';
+        parsed.streetVisitedToday ??= [];
+        parsed.bookstoreVisitsTotal ??= 0;
+        const maxSec = getPhaseDurationSec(parsed.phase);
+        if (typeof parsed.phaseRemainingSec !== 'number' || !Number.isFinite(parsed.phaseRemainingSec)) {
+          parsed.phaseRemainingSec = maxSec;
+        } else {
+          parsed.phaseRemainingSec = Math.max(0, Math.min(maxSec, Math.floor(parsed.phaseRemainingSec)));
+        }
+        if ((parsed.dayTab as string) === 'shop') parsed.dayTab = 'orders';
         return parsed;
       }
     }
@@ -339,8 +414,23 @@ export function saveRun(state: GameState): void {
   try {
     // 设计稿 2.5 节存档边界：夜履约现场内禁止检查点存档
     if (state.phase !== 'site') {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function clearSavedRun(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch {
+    // ignore storage errors
+  }
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     // ignore storage errors
   }

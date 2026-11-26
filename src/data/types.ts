@@ -1,5 +1,6 @@
 export type Phase = 'day' | 'board' | 'site' | 'settle' | 'end' | 'bad_end';
-export type DayTab = 'orders' | 'street' | 'shop';
+export type DayTab = 'orders' | 'street';
+export type StreetZone = 'front' | 'back';
 export type CraftMode = 'standard' | 'rush' | 'fine' | 'proxy';
 export type NightOutcome = 'success' | 'failed' | 'refused' | 'pressed' | 'fled' | 'rested';
 export type ScenarioId =
@@ -15,20 +16,76 @@ export type ScenarioId =
 
 export type ShopUpgradeId = 'copper_bell' | 'jade_censer' | 'iron_bolt' | 'tall_cabinet';
 export type FavorCardId = 'card_liu' | 'card_chen' | 'card_boy';
+export type SkillBranchId = 'craft' | 'sight' | 'ward';
+export type SkillId =
+  | 'craft_nimble'
+  | 'craft_trim'
+  | 'craft_master'
+  | 'sight_echo'
+  | 'sight_omen'
+  | 'sight_eye'
+  | 'ward_flame'
+  | 'ward_heart'
+  | 'ward_decree';
 
-export type DayGuestArt = 'chen_auntie' | 'doctor_lin' | 'wu_day' | 'ajie_day' | 'day_villager';
+export interface SkillDef {
+  id: SkillId;
+  branch: SkillBranchId;
+  tier: 1 | 2 | 3;
+  name: string;
+  costPts: number;
+  prereq?: SkillId;
+  tag: string;
+  summary: string;
+  effects: string[];
+  hookNote: string;
+}
+
+export type DayGuestArt =
+  | 'chen_auntie'
+  | 'merchant_woman'
+  | 'doctor_lin'
+  | 'elder_scholar'
+  | 'wu_day'
+  | 'ajie_day'
+  | 'boatman_day'
+  | 'day_villager';
 
 export type EerieGuestArt =
   | 'paper_boy'
+  | 'lantern_child'
   | 'masked_wu'
   | 'ajie_night'
   | 'umbrella'
+  | 'ferry_ghost'
   | 'old_accountant'
   | 'paper_bride'
   | 'mirror_guest'
+  | 'tailor_ghost'
+  | 'ash_collector'
   | 'temple_deity'
   | 'opera_ghost'
   | 'night_auntie';
+
+export type CharacterCamp = 'resident' | 'living' | 'eerie' | 'trap';
+
+export interface CharacterProfile {
+  id: string;
+  name: string;
+  title: string;
+  camp: CharacterCamp;
+  art: DayGuestArt | EerieGuestArt;
+  sealChar: string;
+  firstDay: number;
+  appearance: string;
+  traits: string[];
+  bio: string;
+  ruleOrHabit: string;
+  /** Non-spoiling short identity shown inside live speech bubble */
+  bubbleIdentity: string;
+  /** Non-spoiling visual/behavioral clues shown inside live speech bubble */
+  bubbleTraits: string[];
+}
 
 export interface DialogueBeat {
   speaker: string;
@@ -42,6 +99,7 @@ export interface DayOrderDef {
   dayMax: number;
   fixedDay?: number;
   client: string;
+  characterId?: string;
   title: string;
   summary: string;
   guestArt: DayGuestArt;
@@ -72,6 +130,7 @@ export interface NightOrderDef {
   id: string;
   day: number;
   client: string;
+  characterId?: string;
   title: string;
   boardTitle: string;
   boardDesc: string;
@@ -126,7 +185,10 @@ export type CardIconKind =
   | 'broom'
   | 'helper'
   | 'wash'
-  | 'rest';
+  | 'rest'
+  | 'teahouse'
+  | 'bookstore'
+  | 'shrine';
 
 export interface ActionCardStat {
   label: string;
@@ -148,6 +210,7 @@ export interface ActionOption {
   title: string;
   detail: string;
   primary?: boolean;
+  skill?: boolean;
   danger?: string;
   reason?: string;
   badge?: string;
@@ -178,10 +241,51 @@ export interface HelperState {
   nerve: number;
 }
 
+export type VisitResultKind =
+  | 'completed_standard'
+  | 'completed_rush'
+  | 'completed_fine'
+  | 'completed_proxy'
+  | 'night_success'
+  | 'night_pressed'
+  | 'night_failed'
+  | 'night_fled'
+  | 'night_refused'
+  | 'trap_exposed'
+  | 'trap_survived'
+  | 'trap_killed';
+
+export interface VisitRecord {
+  id: string;
+  day: number;
+  period: 'day' | 'night';
+  characterId: string;
+  guestName: string;
+  orderId: string;
+  orderTitle: string;
+  kind: 'living' | 'eerie' | 'trap';
+  result: VisitResultKind;
+  cashDelta: number;
+  ptsDelta: number;
+  note: string;
+}
+
+export interface TownIntelDoc {
+  id: string;
+  code: string;
+  title: string;
+  category: string;
+  costPts: number;
+  summary: string;
+  body: string;
+  tip: string;
+}
+
 export interface GameState {
   day: number;
   maxDay: number;
   phase: Phase;
+  phaseRemainingSec: number;
   dayTab: DayTab;
   selectedOrderId: string | null;
   selectedNightOrderId: string | null;
@@ -255,6 +359,18 @@ export interface GameState {
   lastSettleSummary: string;
   badEndReason: string;
   lastDaySnapshot: string | null;
+  metCharacterIds?: string[];
+  visitRecords?: VisitRecord[];
+  scannedTrapDays?: number[];
+  forecastDays?: number[];
+  unlockedIntelIds?: string[];
+  claimedCodexMilestones?: string[];
+  learnedSkills?: SkillId[];
+  skillUsesTonight?: string[];
+  craftOrderCounter?: number;
+  streetZone?: StreetZone;
+  streetVisitedToday?: string[];
+  bookstoreVisitsTotal?: number;
   log: string[];
   message: string;
 }
@@ -262,6 +378,9 @@ export interface GameState {
 export interface StageDialogueView {
   speaker: string;
   roleTag: string;
+  identity?: string;
+  traits?: string[];
+  characterId?: string;
   cue: string;
   line: string;
   step: number;

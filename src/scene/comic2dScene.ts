@@ -29,6 +29,8 @@ const STAGE_H = 900;
 
 type CameraPreset =
   | 'day_wide'
+  | 'street_front'
+  | 'street_back'
   | 'craft_closeup'
   | 'night_board'
   | 'site_wu'
@@ -44,6 +46,8 @@ interface CameraView {
 
 const CAMERA_PRESETS: Record<CameraPreset, CameraView> = {
   day_wide: { cx: 800, cy: 410, zoom: 1.0 },
+  street_front: { cx: 800, cy: 410, zoom: 1.0 },
+  street_back: { cx: 1930, cy: 410, zoom: 0.9 },
   craft_closeup: { cx: 745, cy: 455, zoom: 1.13 },
   night_board: { cx: 810, cy: 405, zoom: 1.02 },
   site_wu: { cx: 745, cy: 406, zoom: 1.04 },
@@ -56,12 +60,15 @@ type ParallaxPlane = 'back' | 'mid' | 'front';
 
 interface Hotspot2D {
   key: string;
+  mode: 'shop' | 'street';
+  streetSpot?: StreetSpotKey;
   plane: ParallaxPlane;
   // Stage coordinates (anchor for marker + hit ellipse)
   x: number;
   y: number;
   rx: number;
   ry: number;
+  markerY?: number;
   choices: Array<[string, string]>;
   action?: string;
   marker: HTMLButtonElement;
@@ -95,7 +102,8 @@ export function createComic2DScene(
   scenePanel: HTMLElement,
   markerLayer: HTMLElement,
   markerHint: HTMLElement,
-  onEerieEvent?: (kind: EerieEventKind) => void
+  onEerieEvent?: (kind: EerieEventKind) => void,
+  onOpenStreet?: () => void
 ): ShopSceneController | null {
   const canvas = document.createElement('canvas');
   canvas.setAttribute('aria-hidden', 'true');
@@ -115,6 +123,7 @@ export function createComic2DScene(
   const rawTargets: Array<Omit<Hotspot2D, 'marker'>> = [
     {
       key: 'lamp',
+      mode: 'shop',
       plane: 'mid',
       x: 1012,
       y: 216,
@@ -123,11 +132,13 @@ export function createComic2DScene(
       choices: [
         ['use-strip', '用纸带封灯'],
         ['guard', '请阿杰守灯'],
+        ['peak-trim-lamps', '挑亮前两红灯'],
         ['calm-flame', '定住灯火']
       ]
     },
     {
       key: 'doll',
+      mode: 'shop',
       plane: 'mid',
       x: 960,
       y: 386,
@@ -140,6 +151,7 @@ export function createComic2DScene(
     },
     {
       key: 'paper',
+      mode: 'shop',
       plane: 'front',
       x: 912,
       y: 552,
@@ -147,6 +159,7 @@ export function createComic2DScene(
       ry: 48,
       choices: [
         ['place-horse', '摆正纸马'],
+        ['peak-veil-ward', '挂红帐隔目'],
         ['rite-orthodox', '正统仪轨'],
         ['use-ward-doll', '护身替纸人'],
         ['use-talisman', '安神纸符'],
@@ -158,6 +171,7 @@ export function createComic2DScene(
     },
     {
       key: 'door',
+      mode: 'shop',
       plane: 'back',
       x: 1298,
       y: 356,
@@ -172,6 +186,7 @@ export function createComic2DScene(
     },
     {
       key: 'phone',
+      mode: 'shop',
       plane: 'front',
       x: 694,
       y: 556,
@@ -181,6 +196,7 @@ export function createComic2DScene(
     },
     {
       key: 'plaque',
+      mode: 'shop',
       plane: 'front',
       x: 796,
       y: 552,
@@ -193,6 +209,7 @@ export function createComic2DScene(
     },
     {
       key: 'book',
+      mode: 'shop',
       plane: 'front',
       x: 518,
       y: 558,
@@ -200,11 +217,129 @@ export function createComic2DScene(
       ry: 44,
       choices: [
         ['audit-ledger', '摊账对簿'],
+        ['peak-avert-chair', '掩目不数人'],
         ['pick_d2_wu_cleanse', '接净宅单'],
         ['pick_d1_chen_white', '陈婶白事单'],
         ['pick_d3_chen_horse', '补做纸马'],
         ['night', '翻夜账'],
         ['go', '赴约']
+      ]
+    },
+    // 外出街巷四处可交互建筑热点（骑楼三连开间 + 右侧老槐石牌坊，浮标置于廊下门槛处不挡匾额与二楼花窗）
+    {
+      key: 'street_grocery',
+      mode: 'street',
+      streetSpot: 'grocery',
+      plane: 'mid',
+      x: 377,
+      y: 356,
+      rx: 170,
+      ry: 170,
+      markerY: 472,
+      choices: [
+        ['supply_small', '镇集杂货进货'],
+        ['supply_large', '大批量进货']
+      ]
+    },
+    {
+      key: 'street_clinic',
+      mode: 'street',
+      streetSpot: 'clinic',
+      plane: 'mid',
+      x: 741,
+      y: 356,
+      rx: 170,
+      ry: 170,
+      markerY: 472,
+      choices: [['supply_lin_clean', '林氏诊所备药纸']]
+    },
+    {
+      key: 'street_tailor',
+      mode: 'street',
+      streetSpot: 'tailor',
+      plane: 'mid',
+      x: 1095,
+      y: 356,
+      rx: 162,
+      ry: 170,
+      markerY: 472,
+      choices: [
+        ['inquire_liu', '向柳裁缝问忌'],
+        ['prepare_strip', '裁窄纸带'],
+        ['craft_talisman', '借案折安神符']
+      ]
+    },
+    {
+      key: 'street_nav_back',
+      mode: 'street',
+      plane: 'mid',
+      x: 1324,
+      y: 340,
+      rx: 68,
+      ry: 100,
+      markerY: 266,
+      choices: [['street_go_back', '往深街旧坊 ›']]
+    },
+    {
+      key: 'street_nav_front',
+      mode: 'street',
+      plane: 'mid',
+      x: 1435,
+      y: 266,
+      rx: 68,
+      ry: 68,
+      markerY: 266,
+      choices: [['street_go_front', '‹ 折返前街']]
+    },
+    {
+      key: 'street_teahouse',
+      mode: 'street',
+      streetSpot: 'teahouse',
+      plane: 'mid',
+      x: 1448,
+      y: 356,
+      rx: 168,
+      ry: 170,
+      markerY: 472,
+      choices: [['explore_teahouse', '德昌茶楼叙旧']]
+    },
+    {
+      key: 'street_bookstore',
+      mode: 'street',
+      streetSpot: 'bookstore',
+      plane: 'mid',
+      x: 1816,
+      y: 356,
+      rx: 168,
+      ry: 170,
+      markerY: 472,
+      choices: [['explore_bookstore', '墨香书肆翻卷']]
+    },
+    {
+      key: 'street_shrine',
+      mode: 'street',
+      streetSpot: 'shrine',
+      plane: 'mid',
+      x: 2177,
+      y: 356,
+      rx: 166,
+      ry: 170,
+      markerY: 472,
+      choices: [['explore_shrine', '城隍堂上香']]
+    },
+    {
+      key: 'street_alley',
+      mode: 'street',
+      streetSpot: 'alley',
+      plane: 'mid',
+      x: 2468,
+      y: 382,
+      rx: 104,
+      ry: 145,
+      markerY: 458,
+      choices: [
+        ['calm_rumor', '请阿杰圆场'],
+        ['explore_alley', '老槐巷拾遗']
       ]
     }
   ];
@@ -212,7 +347,7 @@ export function createComic2DScene(
   function perform(action?: string) {
     if (!action) return;
     if (action === 'open_street') {
-      document.querySelector<HTMLButtonElement>('button[data-open-street]')?.click();
+      onOpenStreet?.();
       return;
     }
     const button = document.querySelector<HTMLButtonElement>(`#actions button[data-action="${action}"]`);
@@ -228,20 +363,25 @@ export function createComic2DScene(
     if (action === 'supply_small' || action === 'supply_large') return 'grocery';
     if (action === 'supply_lin_clean') return 'clinic';
     if (action === 'inquire_liu' || action === 'prepare_strip' || action === 'craft_talisman') return 'tailor';
-    if (action === 'calm_rumor') return 'alley';
+    if (action === 'explore_teahouse') return 'teahouse';
+    if (action === 'explore_bookstore') return 'bookstore';
+    if (action === 'explore_shrine') return 'shrine';
+    if (action === 'calm_rumor' || action === 'explore_alley') return 'alley';
     return null;
   }
 
   const targets: Hotspot2D[] = [];
   function linkAction(action: string | undefined, isOn: boolean) {
     if (!action) return;
-    highlightedStreetSpot = isOn ? actionToStreetSpot(action) : null;
+    const spot = actionToStreetSpot(action);
+    highlightedStreetSpot = isOn ? spot : null;
     document
       .querySelectorAll(`#actions button[data-action="${action}"]`)
       .forEach((btn) => btn.classList.toggle('linked', isOn));
     let matchedKey: string | null = null;
     for (const t of targets) {
-      if (t.action === action) {
+      const matched = t.action === action || Boolean(spot && t.streetSpot === spot && t.action);
+      if (matched) {
         t.marker.classList.toggle('linked', isOn);
         matchedKey = t.key;
       }
@@ -268,6 +408,7 @@ export function createComic2DScene(
   let gameState: GameState | null = null;
   let currentDialogue: StageDialogueView | undefined;
   let lastBubbleSignature = '';
+  let lastBubblePosKey = '';
   let width = 0;
   let height = 0;
   let dpr = 1;
@@ -277,13 +418,47 @@ export function createComic2DScene(
   let frame = 0;
   let currentPreset: CameraPreset = 'day_wide';
 
+  const deckEl = document.querySelector<HTMLElement>('.control-deck');
+  const hudTopEl = document.querySelector<HTMLElement>('.hud-top');
+  const encounterBoxEl = document.getElementById('encounter-hud');
   const bubbleEl = document.getElementById('speech-bubble') as HTMLElement | null;
   const sbSpeakerEl = document.getElementById('sb-speaker') as HTMLElement | null;
   const sbRoleEl = document.getElementById('sb-role') as HTMLElement | null;
   const sbProgressEl = document.getElementById('sb-progress') as HTMLElement | null;
+  const sbProfileEl = document.getElementById('sb-profile') as HTMLElement | null;
+  const sbIdentityEl = document.getElementById('sb-identity') as HTMLElement | null;
+  const sbTraitsEl = document.getElementById('sb-traits') as HTMLElement | null;
   const sbCueEl = document.getElementById('sb-cue') as HTMLElement | null;
   const sbLineEl = document.getElementById('sb-line') as HTMLElement | null;
   const sbFootEl = document.getElementById('sb-foot') as HTMLElement | null;
+
+  // 缓存 HUD / 底部操作台 / 气泡尺寸，避免 60fps 主循环中每帧触发布局重排（Forced Reflow）
+  const layoutCache = {
+    deckTop: 640,
+    topSafeHotspot: 92,
+    topSafeBubble: 112,
+    bubbleW: 360,
+    bubbleH: 136
+  };
+
+  function measureLayout() {
+    const hostRect = host.getBoundingClientRect();
+    if (hostRect.width < 1 || hostRect.height < 1) return;
+    layoutCache.deckTop = deckEl ? deckEl.getBoundingClientRect().top - hostRect.top : height - 180;
+    layoutCache.topSafeHotspot =
+      encounterBoxEl && !encounterBoxEl.hidden
+        ? Math.max(96, encounterBoxEl.getBoundingClientRect().bottom - hostRect.top + 18)
+        : 92;
+    layoutCache.topSafeBubble = hudTopEl
+      ? Math.max(106, hudTopEl.getBoundingClientRect().bottom - hostRect.top + 8)
+      : 112;
+    if (bubbleEl && !bubbleEl.hidden) {
+      const bw = bubbleEl.offsetWidth;
+      const bh = bubbleEl.offsetHeight;
+      if (bw > 0) layoutCache.bubbleW = bw;
+      if (bh > 0) layoutCache.bubbleH = bh;
+    }
+  }
 
   function renderRichBubbleLine(target: HTMLElement, raw: string) {
     target.replaceChildren();
@@ -324,6 +499,7 @@ export function createComic2DScene(
 
   function pickCameraPreset(state: GameState): CameraPreset {
     if (state.phase === 'day') {
+      if (state.dayTab === 'street') return state.streetZone === 'back' ? 'street_back' : 'street_front';
       if (state.dayTab === 'orders' && state.selectedOrderId) return 'craft_closeup';
       return 'day_wide';
     }
@@ -388,15 +564,17 @@ export function createComic2DScene(
   function resize() {
     const newW = Math.max(1, host.clientWidth);
     const newH = Math.max(1, host.clientHeight);
-    if (newW === width && newH === height) return;
-    width = newW;
-    height = newH;
-    narrow = width < 741;
-    dpr = Math.min(window.devicePixelRatio || 1, narrow ? 1.5 : 2);
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(height * dpr);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    if (newW !== width || newH !== height) {
+      width = newW;
+      height = newH;
+      narrow = width < 741;
+      dpr = Math.min(window.devicePixelRatio || 1, narrow ? 1.5 : 2);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    }
+    measureLayout();
     if (gameState) renderFrame(performance.now());
   }
 
@@ -448,25 +626,24 @@ export function createComic2DScene(
 
   function updateHotspots() {
     const visible: Array<[number, number]> = [];
-    const hostRect = host.getBoundingClientRect();
-    const deck = document.querySelector('.control-deck');
-    const deckTop = deck ? deck.getBoundingClientRect().top - hostRect.top : height - 180;
-    const encounterBox = document.getElementById('encounter-hud');
-    const topSafe =
-      encounterBox && !encounterBox.hidden
-        ? Math.max(96, encounterBox.getBoundingClientRect().bottom - hostRect.top + 18)
-        : 92;
+    const deckTop = layoutCache.deckTop;
+    const topSafe = layoutCache.topSafeHotspot;
 
     for (const target of targets) {
       if (!target.action) {
-        target.marker.hidden = true;
+        if (!target.marker.hidden) target.marker.hidden = true;
         continue;
       }
       const anchorX = target.key === 'lamp' ? target.x + 12 : target.x;
-      const anchorY = target.key === 'lamp' ? target.y - target.ry * 0.62 : target.y - target.ry * 0.42;
+      const anchorY =
+        target.markerY !== undefined
+          ? target.markerY
+          : target.key === 'lamp'
+            ? target.y - target.ry * 0.62
+            : target.y - target.ry * 0.42;
       const [x, y] = stageToScreen(anchorX, anchorY, target.plane);
       if (x < 0 || x > width || y < topSafe || y > deckTop - 22) {
-        target.marker.hidden = true;
+        if (!target.marker.hidden) target.marker.hidden = true;
         continue;
       }
       const px = Math.max(66, Math.min(width - 66, x));
@@ -494,22 +671,25 @@ export function createComic2DScene(
     const inStreet = !night && gameState.phase === 'day' && gameState.dayTab === 'street';
     const guestVariant = resolveGuestVariant(gameState, night);
     if (!currentDialogue || (!inStreet && !guestVariant)) {
-      if (!bubbleEl.hidden) bubbleEl.hidden = true;
+      if (!bubbleEl.hidden) {
+        bubbleEl.hidden = true;
+        lastBubblePosKey = '';
+      }
       return;
     }
 
-    if (bubbleEl.hidden) bubbleEl.hidden = false;
-    const hostRect = host.getBoundingClientRect();
-    const deck = document.querySelector('.control-deck');
-    const deckTop = deck ? deck.getBoundingClientRect().top - hostRect.top : height - 200;
-    const hudTop = document.querySelector('.hud-top');
-    const topSafe = hudTop ? Math.max(106, hudTop.getBoundingClientRect().bottom - hostRect.top + 8) : 112;
+    if (bubbleEl.hidden) {
+      bubbleEl.hidden = false;
+      measureLayout();
+    }
+    const deckTop = layoutCache.deckTop;
+    const topSafe = layoutCache.topSafeBubble;
 
-    const anchorX = inStreet ? 1094 : guestX;
-    const anchorY = inStreet ? 295 : (night && gameState.day === 4 && gameState.phase !== 'board' ? 544 : 532) - 210;
+    const anchorX = inStreet ? 1134 : guestX;
+    const anchorY = inStreet ? 368 : (night && gameState.day === 4 && gameState.phase !== 'board' ? 544 : 532) - 210;
     const [headX, headY] = stageToScreen(anchorX, anchorY, 'mid');
-    const bw = bubbleEl.offsetWidth || 360;
-    const bh = bubbleEl.offsetHeight || 136;
+    const bw = layoutCache.bubbleW;
+    const bh = layoutCache.bubbleH;
 
     // 默认放在角色右侧，尖尾朝左指向角色；若角色靠右或右侧空间不足则自动翻到左侧
     const rightSpace = width - (headX + 68);
@@ -520,10 +700,14 @@ export function createComic2DScene(
     const maxTop = Math.max(topSafe, deckTop - bh - 14);
     const clampedTop = Math.round(Math.max(topSafe, Math.min(maxTop, rawTop)));
 
-    bubbleEl.classList.toggle('tail-left', placeRight);
-    bubbleEl.classList.toggle('tail-right', !placeRight);
-    bubbleEl.style.left = `${clampedLeft}px`;
-    bubbleEl.style.top = `${clampedTop}px`;
+    const posKey = `${clampedLeft},${clampedTop},${placeRight ? 1 : 0}`;
+    if (posKey !== lastBubblePosKey) {
+      lastBubblePosKey = posKey;
+      bubbleEl.classList.toggle('tail-left', placeRight);
+      bubbleEl.classList.toggle('tail-right', !placeRight);
+      bubbleEl.style.left = `${clampedLeft}px`;
+      bubbleEl.style.top = `${clampedTop}px`;
+    }
   }
 
   function resolveGuestVariant(state: GameState, night: boolean): GuestVariant | null {
@@ -840,6 +1024,17 @@ export function createComic2DScene(
 
   const ro = new ResizeObserver(resize);
   ro.observe(host);
+  const layoutRo = new ResizeObserver(() => {
+    measureLayout();
+    if (gameState) {
+      updateHotspots();
+      updateSpeechBubble(isNightPhase(gameState.phase));
+    }
+  });
+  if (deckEl) layoutRo.observe(deckEl);
+  if (hudTopEl) layoutRo.observe(hudTopEl);
+  if (encounterBoxEl) layoutRo.observe(encounterBoxEl);
+  if (bubbleEl) layoutRo.observe(bubbleEl);
   const onVis = () => startLoop();
   const onMotion = () => {
     renderFrame(performance.now());
@@ -857,14 +1052,29 @@ export function createComic2DScene(
     },
     sync(state: GameState, moves: ActionOption[], dialogue?: StageDialogueView) {
       const first = !gameState;
+      const wasStreet = Boolean(
+        gameState && !isNightPhase(gameState.phase) && gameState.phase === 'day' && gameState.dayTab === 'street'
+      );
       gameState = state;
       currentDialogue = dialogue;
       currentPreset = pickCameraPreset(state);
+      const nowStreet = !isNightPhase(state.phase) && state.phase === 'day' && state.dayTab === 'street';
+      if (first || wasStreet !== nowStreet) {
+        const goal = CAMERA_PRESETS[currentPreset];
+        cam.cx = goal.cx;
+        cam.cy = goal.cy;
+        cam.zoom = goal.zoom;
+      }
+      hoveredCanvasKey = null;
+      highlightedKey = null;
+      highlightedStreetSpot = null;
+      host.style.cursor = '';
 
       if (bubbleEl && dialogue) {
-        const sig = `${dialogue.speaker}|${dialogue.step}|${dialogue.line}`;
+        const sig = `${dialogue.speaker}|${dialogue.identity ?? ''}|${dialogue.step}|${dialogue.line}`;
         if (sig !== lastBubbleSignature) {
           lastBubbleSignature = sig;
+          lastBubblePosKey = '';
           bubbleEl.classList.toggle('eerie', Boolean(dialogue.eerie));
           bubbleEl.classList.toggle('can-advance', !dialogue.finished);
           if (sbSpeakerEl) sbSpeakerEl.textContent = dialogue.speaker;
@@ -874,18 +1084,35 @@ export function createComic2DScene(
               ? `讲述完毕 · ${dialogue.step}/${dialogue.total}`
               : `${dialogue.step}/${dialogue.total}`;
           }
+          if (sbProfileEl) {
+            const hasProfile = Boolean(dialogue.identity || dialogue.traits?.length);
+            sbProfileEl.hidden = !hasProfile;
+            if (sbIdentityEl) sbIdentityEl.textContent = dialogue.identity ?? '';
+            if (sbTraitsEl) {
+              sbTraitsEl.replaceChildren(
+                ...(dialogue.traits ?? []).map((t) => {
+                  const tag = document.createElement('span');
+                  tag.className = 'sb-trait';
+                  tag.textContent = t;
+                  return tag;
+                })
+              );
+            }
+          }
           if (sbCueEl) {
             sbCueEl.textContent = dialogue.cue;
             sbCueEl.hidden = !dialogue.cue;
           }
           if (sbLineEl) renderRichBubbleLine(sbLineEl, dialogue.line);
           if (sbFootEl) sbFootEl.hidden = dialogue.finished;
+          bubbleEl.hidden = false;
           bubbleEl.classList.remove('pop');
           void bubbleEl.offsetWidth;
           bubbleEl.classList.add('pop');
         }
       } else if (bubbleEl) {
         lastBubbleSignature = '';
+        lastBubblePosKey = '';
         bubbleEl.hidden = true;
       }
 
@@ -900,9 +1127,11 @@ export function createComic2DScene(
         });
       }
       for (const target of targets) {
-        if (inStreet) {
+        const modeMatches = inStreet ? target.mode === 'street' : target.mode === 'shop';
+        if (!modeMatches) {
           target.action = undefined;
           target.marker.hidden = true;
+          target.marker.classList.remove('linked');
           continue;
         }
         const choice = target.choices.find(([id]) => clickable.has(id));
@@ -915,13 +1144,18 @@ export function createComic2DScene(
           target.marker.hidden = true;
         }
       }
+      measureLayout();
       if (first || reducedMotion.matches) renderFrame(performance.now());
-      else updateSpeechBubble(isNightPhase(state.phase));
+      else {
+        updateHotspots();
+        updateSpeechBubble(isNightPhase(state.phase));
+      }
     },
     dispose() {
       active = false;
       cancelAnimationFrame(frame);
       ro.disconnect();
+      layoutRo.disconnect();
       document.removeEventListener('visibilitychange', onVis);
       reducedMotion.removeEventListener('change', onMotion);
       host.removeEventListener('pointermove', onPointerMove);

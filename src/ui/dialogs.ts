@@ -1,9 +1,14 @@
 import { DAY_META, getScheduledNightOrder } from '../data/night';
 import { SCENARIOS } from '../data/scenarios';
 import { SHOP_UPGRADES, SYSTEM_SUPPLIES, type ShopIconKind } from '../data/systemShop';
-import type { GameState, NightOutcome, ScenarioId, ShopUpgradeId } from '../data/types';
+import type { GameState, NightOutcome, ScenarioId, ShopUpgradeId, SkillId } from '../data/types';
 import { OUTCOME_LABELS, buildLedgerNotes, isNightPhase } from '../engine';
 import { makeActionButton } from './stage';
+import {
+  createSystemPanelController,
+  type SystemTabId,
+  type VisitorFilterKind
+} from './systemPanel';
 
 const SHOP_ITEM_ICONS: Record<ShopIconKind, string> = {
   ration_1:
@@ -62,12 +67,22 @@ function classifyLogEntry(text: string): { tag: string; cls: string } {
   return { tag: '记事', cls: 'note' };
 }
 
+export interface SystemDialogHooks {
+  onLearnSkill?: (skillId: SkillId) => boolean;
+  onIntelScan?: () => boolean;
+  onIntelForecast?: () => boolean;
+  onDecryptIntel?: (docId: string) => boolean;
+  onInspectCharacter?: (characterId: string) => void;
+}
+
 export function createDialogsController(
   onSelectScenario: (id: ScenarioId, title: string) => void,
   onRedeemSupply: (supplyId: string) => void,
   onBuyUpgrade: (upgradeId: ShopUpgradeId) => void,
   onReplayPrologue: () => void,
-  onFlipSound?: () => void
+  onResetRun: () => void,
+  onFlipSound?: () => void,
+  systemHooks: SystemDialogHooks = {}
 ): DialogsController {
   const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const ledgerDialog = byId<HTMLDialogElement>('ledger');
@@ -75,6 +90,7 @@ export function createDialogsController(
   const settingsDialog = byId<HTMLDialogElement>('settings-dialog');
   const confirmDialog = byId<HTMLDialogElement>('confirmation');
   const dawnDialog = byId<HTMLDialogElement>('dawn-ritual');
+  const systemPanel = createSystemPanelController();
 
   let seenLogCount = 0;
   let pendingConfirm: (() => void) | null = null;
@@ -82,6 +98,21 @@ export function createDialogsController(
   let toastTimer = 0;
   let ledgerViewDay = 1;
   let lastLedgerState: GameState | null = null;
+  let lastSystemState: GameState | null = null;
+  let activeSystemTab: SystemTabId = 'exchange';
+
+  function setSystemTab(tab: SystemTabId) {
+    activeSystemTab = tab;
+    const tabsEl = byId('system-tabs');
+    tabsEl.querySelectorAll<HTMLButtonElement>('button[data-sys-tab]').forEach((btn) => {
+      const active = btn.dataset.sysTab === tab;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', String(active));
+    });
+    systemDialog.querySelectorAll<HTMLElement>('.sys-tab-panel[data-sys-panel]').forEach((panel) => {
+      panel.hidden = panel.dataset.sysPanel !== tab;
+    });
+  }
 
   function animateLedgerFlip(dir: 'prev' | 'next') {
     const book = byId('ledger-book');
@@ -266,8 +297,41 @@ export function createDialogsController(
     onSelectScenario(id, title);
   });
 
+  byId('system-tabs').addEventListener('click', (event) => {
+    const tabBtn = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-sys-tab]');
+    if (!tabBtn) return;
+    const tab = tabBtn.dataset.sysTab as SystemTabId;
+    if (tab && tab !== activeSystemTab) {
+      setSystemTab(tab);
+      onFlipSound?.();
+    }
+  });
+
   systemDialog.addEventListener('click', (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+    const target = event.target as HTMLElement;
+
+    const filterBtn = target.closest<HTMLButtonElement>('button[data-visitor-filter]');
+    if (filterBtn) {
+      const nextFilter = filterBtn.dataset.visitorFilter as VisitorFilterKind;
+      if (nextFilter && lastSystemState) {
+        systemPanel.setVisitorFilter(nextFilter);
+        systemPanel.render(lastSystemState);
+        onFlipSound?.();
+      }
+      return;
+    }
+
+    const charBtn = target.closest<HTMLButtonElement>('button[data-open-char]');
+    if (charBtn) {
+      const charId = charBtn.dataset.openChar;
+      if (charId) {
+        systemDialog.close();
+        systemHooks.onInspectCharacter?.(charId);
+      }
+      return;
+    }
+
+    const button = target.closest<HTMLButtonElement>('button[data-action]');
     if (!button || button.disabled) return;
     const actionId = button.dataset.action ?? '';
     const cardName = button.dataset.cardTitle ?? '';
@@ -277,12 +341,37 @@ export function createDialogsController(
     } else if (actionId.startsWith('upg_')) {
       onBuyUpgrade(actionId.slice(4) as ShopUpgradeId);
       if (cardName) showShopToast(`✓ 已永久装配：${cardName}`);
+    } else if (actionId.startsWith('skill_')) {
+      const skillId = actionId.slice('skill_'.length) as SkillId;
+      if (systemHooks.onLearnSkill?.(skillId)) {
+        showShopToast(`✓ 已习得技能「${cardName}」`);
+      }
+    } else if (actionId === 'intel_scan_trap') {
+      if (systemHooks.onIntelScan?.()) {
+        showShopToast('✓ 破绽扫描完成：已核实今夜禁忌并截取诱杀破绽');
+      }
+    } else if (actionId === 'intel_forecast_next') {
+      if (systemHooks.onIntelForecast?.()) {
+        showShopToast('✓ 天机预演完成：明日夜客与禁忌已归档');
+      }
+    } else if (actionId.startsWith('intel_doc_')) {
+      const docId = actionId.slice('intel_doc_'.length);
+      if (systemHooks.onDecryptIntel?.(docId)) {
+        showShopToast(`✓ 已解密《${cardName}》（阴气 −1）`);
+      }
     }
   });
 
   byId('replay-prologue').addEventListener('click', () => {
     settingsDialog.close();
     onReplayPrologue();
+  });
+
+  byId('reset-run').addEventListener('click', () => {
+    settingsDialog.close();
+    pendingConfirm = onResetRun;
+    byId('consequence').textContent = '确定清除本地保存的本周目进度与剩余时辰，从第一日清晨重新开铺吗？';
+    confirmDialog.showModal();
   });
 
   byId('confirm-action').addEventListener('click', () => {
@@ -417,6 +506,7 @@ export function createDialogsController(
       byId('dawn-ritual-confirm').focus({ preventScroll: true });
     },
     renderSystemShop(state: GameState) {
+      lastSystemState = state;
       const inSite = state.phase === 'site';
       const statusEl = byId('system-shop-status');
       statusEl.innerHTML = [
@@ -569,6 +659,8 @@ export function createDialogsController(
       byId('system-survival').replaceChildren(...survivalCards);
       byId('system-talisman').replaceChildren(...talismanCards);
       byId('system-upgrades').replaceChildren(...upgradeCards);
+      setSystemTab(activeSystemTab);
+      systemPanel.render(state);
     },
     renderLedger(state: GameState) {
       if (!ledgerDialog.open) {

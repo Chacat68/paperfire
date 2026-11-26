@@ -155,7 +155,7 @@ export const DAY_ORDERS: DayOrderDef[] = [
     client: '老张头（活人乡邻）',
     title: '寿诞彩纸马',
     summary: '老张头给家里老人备的彩纸马，料要齐，交得早能多赚点街坊口碑。',
-    guestArt: 'day_villager',
+    guestArt: 'elder_scholar',
     hassleNote: '活人日常麻烦：用料要足（2 纸料），老人挑颜色鲜亮。',
     storyBeats: [
       {
@@ -293,7 +293,7 @@ export const DAY_ORDERS: DayOrderDef[] = [
     client: '路过香客（活人香客）',
     title: '自带料的糊口单',
     summary: '客人自带黄表纸和竹篾来找你扎一对小灯，不耗库存纸料，现结 12 现金。',
-    guestArt: 'day_villager',
+    guestArt: 'boatman_day',
     hassleNote: '活人救急单：自带纸料零消耗，虽赚得少，但绝无风险。',
     storyBeats: [
       {
@@ -368,7 +368,7 @@ export const DAY_ORDERS: DayOrderDef[] = [
     client: '茶馆老板娘（活人商户）',
     title: '茶馆翻新镇宅门神',
     summary: '老板娘一早来换新门神，压低声音说昨夜听见无声唢呐从北巷飘过，劝你天黑别抬头看红盖头。',
-    guestArt: 'chen_auntie',
+    guestArt: 'merchant_woman',
     hassleNote: '活人日常麻烦：要求洁净 ≥ 2 且不可贴反门神左右，顺带透出今夜顶格预警。',
     storyBeats: [
       {
@@ -403,7 +403,7 @@ export const DAY_ORDERS: DayOrderDef[] = [
     client: '老戏班班主（活人艺人）',
     title: '修补纸扎凤冠与水袖',
     summary: '戏班为后几日庙会排老戏，托你补一顶轻纸凤冠。班主说后台铜镜夜里总映出多出来的人影。',
-    guestArt: 'doctor_lin',
+    guestArt: 'elder_scholar',
     hassleNote: '活人日常麻烦：细活儿费眼神，要求洁净 ≥ 1，酬劳体面。',
     storyBeats: [
       {
@@ -510,7 +510,7 @@ export const DAY_ORDERS: DayOrderDef[] = [
     client: '庙会会首（活人）',
     title: '【庙会特单】彩扎游神纸龙头',
     summary: '庙会当日全镇沸腾，会首重金急订彩扎龙头压轴；接下可得丰厚现金与系统奖励，但务必留够净纸与洁净应对今夜百戏游神。',
-    guestArt: 'doctor_lin',
+    guestArt: 'elder_scholar',
     hassleNote: '庙会高难活人单：需洁净 ≥ 3、3 工时、3 纸料，点睛前忌朝北摆，但报酬极高。',
     storyBeats: [
       {
@@ -547,7 +547,7 @@ export const DAY_ORDERS: DayOrderDef[] = [
     client: '渡口老船工（活人）',
     title: '江口平安纸船',
     summary: '庙会刚过江雾浓重，老船工来求几只压浪纸船，顺嘴提起夜里渡口总有人问水有多深。',
-    guestArt: 'day_villager',
+    guestArt: 'boatman_day',
     hassleNote: '活人日常麻烦：要求船底糊厚实些防湿气，稳赚现金与纸火点。',
     storyBeats: [
       {
@@ -581,7 +581,7 @@ export const DAY_ORDERS: DayOrderDef[] = [
     client: '镇志老学究（活人）',
     title: '仿民国手绘走马灯',
     summary: '老学究为县志拍照订一盏旧式走马灯，翻出旧档案说铺子以前每次大清算前，屋里都会多出一把空太师椅。',
-    guestArt: 'doctor_lin',
+    guestArt: 'elder_scholar',
     hassleNote: '活人日常麻烦：考据癖重、挑洁净 ≥ 2，顺手交出关于今夜顶格的旧档案。',
     storyBeats: [
       {

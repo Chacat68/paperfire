@@ -1,6 +1,6 @@
 {
   "name": "paperfire",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "《纸火》中式诡异民俗经营生存游戏 — Vite + TypeScript 模块化工程",

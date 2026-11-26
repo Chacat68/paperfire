@@ -1,14 +1,20 @@
 import './styles/game.css';
 import { DAY_META, getScheduledNightOrder } from './data/night';
-import type { ActionOption, DayTab, GameState } from './data/types';
+import type { ActionOption, GameState } from './data/types';
 import {
   buyShopUpgrade,
+  clearSavedRun,
   createRun,
+  decryptTownIntel,
   flipToNight,
+  forecastTomorrowIntel,
+  getPhaseDurationSec,
   getStageView,
+  learnSystemSkill,
   loadRun,
   redeemSystemSupply,
   saveRun,
+  scanTonightTrapIntel,
   settleNight
 } from './engine';
 import { createComic2DScene } from './scene/comic2dScene';
@@ -16,16 +22,15 @@ import { createSfx } from './ui/audio';
 import { createDialogsController } from './ui/dialogs';
 import { createHudController, type ClockView } from './ui/hud';
 import { createPrologueController } from './ui/prologue';
+import { createRosterController } from './ui/roster';
 import { renderStage } from './ui/stage';
 
 const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const DAY_DURATION_SEC = 180; // 白天倒计时 03:00（卯时 06:00 → 酉时 18:00）
-const NIGHT_DURATION_SEC = 150; // 夜晚倒计时 02:30（酉时 18:30 → 卯时 06:00）
-
 const sfx = createSfx();
 const hud = createHudController();
 const prologue = createPrologueController(sfx);
+const roster = createRosterController(() => sfx.paper());
 document.body.classList.add('style-comic2d');
 const sceneCtrl = createComic2DScene(
   byId('game-world'),
@@ -37,13 +42,19 @@ const sceneCtrl = createComic2DScene(
     else if (kind === 'cold_draft') sfx.gust();
     else if (kind === 'window_handprint') sfx.slap();
     else if (kind === 'horse_glance' || kind === 'doll_tilt') sfx.creak();
+  },
+  () => {
+    if (state.phase !== 'day' || state.selectedOrderId) return;
+    state.dayTab = 'street';
+    state.dialogueStep = 0;
+    sfx.creak();
+    sfx.paper();
+    render();
   }
 );
 
 let state: GameState = loadRun();
 let currentActions = new Map<string, ActionOption>();
-let phaseTotalSec = DAY_DURATION_SEC;
-let phaseRemainingSec = DAY_DURATION_SEC;
 
 function shichenOf(hour: number): string {
   const h = ((hour % 24) + 24) % 24;
@@ -78,41 +89,30 @@ function formatHHMM(totalMinutes: number): { shichen: string; hhmm: string } {
   };
 }
 
-function resetPhaseClock(phase: GameState['phase']) {
-  if (phase === 'day') {
-    phaseTotalSec = DAY_DURATION_SEC;
-    phaseRemainingSec = DAY_DURATION_SEC;
-  } else if (phase === 'board' || phase === 'site') {
-    phaseTotalSec = NIGHT_DURATION_SEC;
-    phaseRemainingSec = NIGHT_DURATION_SEC;
-  } else {
-    phaseTotalSec = 1;
-    phaseRemainingSec = 0;
-  }
-}
-
 function buildClockView(paused: boolean): ClockView {
+  const totalSec = Math.max(1, getPhaseDurationSec(state.phase));
+  const remSec = Math.max(0, Math.min(totalSec, state.phaseRemainingSec));
   if (state.phase === 'day') {
-    const elapsed = Math.max(0, Math.min(1, 1 - phaseRemainingSec / phaseTotalSec));
+    const elapsed = Math.max(0, Math.min(1, 1 - remSec / totalSec));
     const { shichen, hhmm } = formatHHMM(360 + elapsed * 720); // 06:00 → 18:00
     return {
       periodText: `白天 · ${shichen} ${hhmm}`,
       countdownLabel: '距入夜落锁',
-      countdownText: formatMMSS(phaseRemainingSec),
-      progressPct: (phaseRemainingSec / phaseTotalSec) * 100,
-      urgent: phaseRemainingSec <= 30,
+      countdownText: formatMMSS(remSec),
+      progressPct: (remSec / totalSec) * 100,
+      urgent: remSec <= 30,
       paused
     };
   }
   if (state.phase === 'board' || state.phase === 'site') {
-    const elapsed = Math.max(0, Math.min(1, 1 - phaseRemainingSec / phaseTotalSec));
+    const elapsed = Math.max(0, Math.min(1, 1 - remSec / totalSec));
     const { shichen, hhmm } = formatHHMM(1110 + elapsed * 690); // 18:30 → 06:00
     return {
       periodText: `夜里 · ${shichen} ${hhmm}`,
       countdownLabel: state.phase === 'site' ? '距时辰失控' : '距五更天明',
-      countdownText: formatMMSS(phaseRemainingSec),
-      progressPct: (phaseRemainingSec / phaseTotalSec) * 100,
-      urgent: phaseRemainingSec <= 30,
+      countdownText: formatMMSS(remSec),
+      progressPct: (remSec / totalSec) * 100,
+      urgent: remSec <= 30,
       paused
     };
   }
@@ -154,7 +154,6 @@ function syncClockHud() {
 const dialogs = createDialogsController(
   (scenarioId, title) => {
     state = createRun(scenarioId);
-    resetPhaseClock(state.phase);
     hud.resetDeltas();
     dialogs.markLogSeen(state.log.length);
     sfx.stamp();
@@ -191,15 +190,76 @@ const dialogs = createDialogsController(
       syncClockHud();
     });
   },
-  () => sfx.paper()
+  () => {
+    clearSavedRun();
+    state = createRun('d1_full');
+    hud.resetDeltas();
+    dialogs.markLogSeen(state.log.length);
+    sfx.stamp();
+    render();
+    byId('stage').scrollTop = 0;
+    prologue.play(() => {
+      state.introSeen = true;
+      saveRun(state);
+      syncClockHud();
+      document.getElementById('stage-title')?.focus({ preventScroll: true });
+    });
+  },
+  () => sfx.paper(),
+  {
+    onLearnSkill: (skillId) => {
+      if (learnSystemSkill(state, skillId)) {
+        sfx.stamp();
+        sfx.reward();
+        render();
+        return true;
+      }
+      return false;
+    },
+    onIntelScan: () => {
+      if (scanTonightTrapIntel(state)) {
+        sfx.reward();
+        render();
+        return true;
+      }
+      return false;
+    },
+    onIntelForecast: () => {
+      if (forecastTomorrowIntel(state)) {
+        sfx.reward();
+        render();
+        return true;
+      }
+      return false;
+    },
+    onDecryptIntel: (docId) => {
+      if (decryptTownIntel(state, docId)) {
+        sfx.stamp();
+        render();
+        return true;
+      }
+      return false;
+    },
+    onInspectCharacter: (characterId) => {
+      sfx.paper();
+      roster.open(state, characterId);
+      syncClockHud();
+    }
+  }
 );
 
-function selectDayTab(tab: DayTab) {
-  state.dayTab = tab;
-  state.selectedOrderId = null;
-  state.dialogueStep = 0;
-  sfx.paper();
-  render();
+function syncAmbientAudio() {
+  if (document.hidden || state.phase === 'end' || state.phase === 'bad_end') {
+    sfx.setAmbient('off');
+    return;
+  }
+  if (state.phase === 'site') {
+    sfx.setAmbient('site');
+  } else if (state.phase === 'board' || state.phase === 'settle') {
+    sfx.setAmbient('night');
+  } else {
+    sfx.setAmbient('day');
+  }
 }
 
 function render() {
@@ -209,12 +269,12 @@ function render() {
   });
   hud.render(state, screen);
   syncClockHud();
+  syncAmbientAudio();
   currentActions = renderStage(
     byId('stage'),
     state,
     screen,
     Boolean(byId('scene').dataset.renderer),
-    selectDayTab,
     (actionId, active) => sceneCtrl?.highlight(actionId, active)
   );
   dialogs.renderLedger(state);
@@ -229,14 +289,6 @@ function runMove(move: ActionOption) {
   const prevPts = state.pts;
   move.run();
   if (dialogs.isAnyOpen()?.id === 'settings-dialog') return;
-
-  if (prevPhase === 'day' && state.phase === 'board') {
-    resetPhaseClock('board');
-  } else if (prevDay !== state.day || (prevPhase === 'bad_end' && state.phase === 'day')) {
-    resetPhaseClock(state.phase);
-  } else if (state.phase === 'settle' || state.phase === 'end' || state.phase === 'bad_end') {
-    resetPhaseClock(state.phase);
-  }
 
   if (state.phase === 'bad_end' && prevPhase !== 'bad_end') {
     sfx.badEnd();
@@ -279,6 +331,8 @@ function runMove(move: ActionOption) {
   } else if (move.id.startsWith('reject_night_') && state.pts > prevPts) {
     sfx.reward();
     sfx.gust();
+  } else if (move.id.startsWith('reject_night_')) {
+    sfx.omen();
   } else if (move.id.startsWith('pick_night_')) {
     sfx.knock();
   } else if (move.id === 'advance_night_dialogue') {
@@ -290,7 +344,20 @@ function runMove(move: ActionOption) {
     sfx.reward();
   } else if (
     move.id.startsWith('craft_') ||
-    ['seal', 'deliver', 'use-strip', 'seat', 'ward-door', 'rite-orthodox', 'use-ward-doll'].includes(move.id)
+    [
+      'seal',
+      'deliver',
+      'use-strip',
+      'seat',
+      'ward-door',
+      'rite-orthodox',
+      'use-ward-doll',
+      'peak-veil-ward',
+      'peak-trim-lamps',
+      'peak-avert-chair',
+      'skill-ward-flame',
+      'skill-ward-decree'
+    ].includes(move.id)
   ) {
     sfx.stamp();
   } else {
@@ -317,8 +384,9 @@ function tickPhaseClock() {
     return;
   }
 
-  phaseRemainingSec = Math.max(0, phaseRemainingSec - 1);
-  if (phaseRemainingSec > 0) {
+  state.phaseRemainingSec = Math.max(0, state.phaseRemainingSec - 1);
+  if (state.phaseRemainingSec > 0) {
+    saveRun(state);
     syncClockHud();
     return;
   }
@@ -326,7 +394,6 @@ function tickPhaseClock() {
   // 倒计时归零：自动切入下一时段
   if (state.phase === 'day') {
     flipToNight(state);
-    resetPhaseClock(state.phase);
     sfx.lock();
     hud.showTransition(
       '酉',
@@ -339,12 +406,10 @@ function tickPhaseClock() {
     const mainOrder = getScheduledNightOrder(state.day, state.h);
     const promised = mainOrder.promisedKey === 'wu_d2' && state.promiseWu;
     settleNight(state, promised ? 'failed' : 'refused');
-    resetPhaseClock(state.phase);
     sfx.omen();
     render();
   } else if (state.phase === 'site') {
     settleNight(state, 'failed');
-    resetPhaseClock(state.phase);
     sfx.omen();
     render();
   }
@@ -362,22 +427,30 @@ byId('open-ledger').addEventListener('click', () => {
   syncClockHud();
 });
 
+byId('open-roster').addEventListener('click', () => {
+  sfx.paper();
+  const screen = getStageView(state, () => {});
+  roster.open(state, screen.dialogue?.characterId);
+  syncClockHud();
+});
+
 byId('toggle-audio').addEventListener('click', () => {
   sfx.toggle();
   hud.syncAudioUI(sfx);
+  syncAmbientAudio();
+});
+
+const audioVolumeEl = document.getElementById('audio-volume') as HTMLInputElement | null;
+audioVolumeEl?.addEventListener('input', () => {
+  sfx.setVolume(Number(audioVolumeEl.value) / 100);
+  hud.syncAudioUI(sfx);
+  syncAmbientAudio();
+});
+audioVolumeEl?.addEventListener('change', () => {
+  if (sfx.enabled && sfx.volume > 0) sfx.paper();
 });
 
 byId('stage').addEventListener('click', (event) => {
-  const streetBtn = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-open-street]');
-  if (streetBtn) {
-    state.dayTab = 'street';
-    state.selectedOrderId = null;
-    state.dialogueStep = 0;
-    sfx.creak();
-    sfx.paper();
-    render();
-    return;
-  }
   const sysBtn = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-open-system]');
   if (sysBtn) {
     sfx.paper();
@@ -429,13 +502,45 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault();
     if (openDialog) openDialog.close();
     else byId('open-settings').click();
+  } else if (k === 'r') {
+    if (openDialog && openDialog.id !== 'roster-dialog') return;
+    event.preventDefault();
+    if (openDialog) openDialog.close();
+    else byId('open-roster').click();
   } else if (k === 'g' && !openDialog && state.phase === 'day' && !state.selectedOrderId) {
     event.preventDefault();
     state.dayTab = state.dayTab === 'street' ? 'orders' : 'street';
+    state.streetZone = 'front';
     state.dialogueStep = 0;
     sfx.creak();
     sfx.paper();
     render();
+  } else if (
+    !openDialog &&
+    state.phase === 'day' &&
+    state.dayTab === 'street' &&
+    (event.key === 'ArrowRight' || k === 'd')
+  ) {
+    if (state.streetZone !== 'back') {
+      event.preventDefault();
+      state.streetZone = 'back';
+      state.message = '你穿过骑楼拱廊，步入烟火深处的后街旧坊。';
+      sfx.paper();
+      render();
+    }
+  } else if (
+    !openDialog &&
+    state.phase === 'day' &&
+    state.dayTab === 'street' &&
+    (event.key === 'ArrowLeft' || k === 'a')
+  ) {
+    if (state.streetZone === 'back') {
+      event.preventDefault();
+      state.streetZone = 'front';
+      state.message = '你沿着骑楼廊道走回前街市集。';
+      sfx.paper();
+      render();
+    }
   } else if (k === 'm') {
     if (openDialog && openDialog.id !== 'settings-dialog') return;
     event.preventDefault();
@@ -448,9 +553,12 @@ document.addEventListener('keydown', (event) => {
 document.querySelectorAll<HTMLDialogElement>('dialog').forEach((dlg) => {
   dlg.addEventListener('close', syncClockHud);
 });
-document.addEventListener('visibilitychange', syncClockHud);
+document.addEventListener('visibilitychange', () => {
+  syncClockHud();
+  syncAmbientAudio();
+});
+window.addEventListener('pagehide', () => saveRun(state));
 
-resetPhaseClock(state.phase);
 dialogs.markLogSeen(state.log.length);
 hud.syncAudioUI(sfx);
 render();

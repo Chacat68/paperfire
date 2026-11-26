@@ -33,13 +33,25 @@ export interface EnvDrawState {
   eerieCtrl: EerieEventController;
 }
 
-/**
- * Layer 0 & 1: Monochrome Xuan-Paper & Sumi-Ink Backdrop, Stepped Lattice Windows,
- * Republican Engraving Timber Beams, Plaque, Cinnabar Couplets, Baizi Paper Cabinet & Wooden Door
- */
-export function drawShopBackdrop(ctx: CanvasRenderingContext2D, env: EnvDrawState) {
-  const { state, darkness, night, third, atSite, steps, opening, patterns, highlightedKey } = env;
+const SHOP_CACHE_OFFSET_X = -140;
+const SHOP_CACHE_OFFSET_Y = -80;
+const SHOP_CACHE_W = 1880;
+const SHOP_CACHE_H = 980;
 
+interface ShopStaticCacheEntry {
+  key: string;
+  canvas: HTMLCanvasElement;
+}
+
+const shopStaticCacheMap = new WeakMap<ComicPatterns, ShopStaticCacheEntry>();
+
+function drawShopStaticArchitecture(
+  ctx: CanvasRenderingContext2D,
+  darkness: number,
+  patterns: ComicPatterns,
+  stockCount: number,
+  tallCabinet: boolean
+) {
   // 1. 宣纸水墨斑驳老墙 (Aged Xuan-paper ivory by day -> deep wet sumi-ink by night)
   const wallTop = lerpColor('#b9b09b', '#121416', darkness);
   const wallMid = lerpColor('#d5ccb8', '#1f2326', darkness);
@@ -110,27 +122,6 @@ export function drawShopBackdrop(ctx: CanvasRenderingContext2D, env: EnvDrawStat
   for (const fy of [548, 580, 616]) {
     inkLine(ctx, -140, fy, 1740, fy, 1.2, 'rgba(12, 11, 11, 0.38)');
   }
-
-  // 3. 左右步步锦木格窗 (Xuan-paper daylight / Bone-white full moon + Dynamic Window Phenomena!)
-  drawLatticeWindow(ctx, 362, 212, 182, 206, env, false);
-  drawLatticeWindow(ctx, 608, 198, 344, 232, env, true);
-
-  // Slanted silver-white window light beam (斜照宣纸白光 / 惨白月光)
-  ctx.save();
-  const beamRGB = night ? '224, 232, 226' : '252, 246, 230';
-  const beamGrad = ctx.createLinearGradient(780, 210, 620, 610);
-  beamGrad.addColorStop(0, `rgba(${beamRGB}, ${night ? 0.14 : 0.24})`);
-  beamGrad.addColorStop(0.7, `rgba(${beamRGB}, ${night ? 0.07 : 0.11})`);
-  beamGrad.addColorStop(1, `rgba(${beamRGB}, 0)`);
-  ctx.fillStyle = beamGrad;
-  ctx.beginPath();
-  ctx.moveTo(615, 205);
-  ctx.lineTo(945, 205);
-  ctx.lineTo(840, 610);
-  ctx.lineTo(440, 610);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
 
   // 4. 承重木柱、石柱础与屋顶檩梁 (Sumi-ink carved pillars & rafters)
   const woodBeam = lerpColor('#242220', '#0e1012', darkness);
@@ -205,8 +196,6 @@ export function drawShopBackdrop(ctx: CanvasRenderingContext2D, env: EnvDrawStat
   }
   ctx.restore();
 
-  drawHangingGarlands(ctx, env);
-
   // 5. 「纸马纸扎」焦墨金字横匾 & 朱砂点睛对联
   inkRect(ctx, 646, 118, 268, 54, lerpColor('#1d1b1a', '#131415', darkness), 2.6);
   ctx.strokeStyle = lerpColor('#ded4be', '#8f8b80', darkness);
@@ -233,7 +222,78 @@ export function drawShopBackdrop(ctx: CanvasRenderingContext2D, env: EnvDrawStat
   drawVerticalCalligraphy(ctx, '诸事平安', 1094, 240, 44, 22, coupletInk, INK);
 
   // 6. 左侧百子纸柜 (Monochrome cabinet with pale paper rolls + occasional red wedding paper!)
-  drawPaperCabinet(ctx, env);
+  drawPaperCabinet(ctx, darkness, patterns, stockCount, tallCabinet);
+}
+
+function getShopStaticCanvas(
+  darkness: number,
+  patterns: ComicPatterns,
+  stockCount: number,
+  tallCabinet: boolean
+): HTMLCanvasElement | null {
+  // 昼夜渐变过渡帧（0.005 < darkness < 0.995）直绘避免频繁重建离屏画布；稳态昼/夜全程复用离屏缓存
+  if (darkness > 0.005 && darkness < 0.995) return null;
+  if (typeof document === 'undefined') return null;
+
+  const snappedDarkness = darkness >= 0.995 ? 1 : 0;
+  const key = `${snappedDarkness}|${stockCount}|${tallCabinet ? 1 : 0}`;
+  const cached = shopStaticCacheMap.get(patterns);
+  if (cached && cached.key === key) return cached.canvas;
+
+  const off = cached?.canvas ?? document.createElement('canvas');
+  if (off.width !== SHOP_CACHE_W || off.height !== SHOP_CACHE_H) {
+    off.width = SHOP_CACHE_W;
+    off.height = SHOP_CACHE_H;
+  }
+  const octx = off.getContext('2d');
+  if (!octx) return null;
+  octx.setTransform(1, 0, 0, 1, 0, 0);
+  octx.clearRect(0, 0, SHOP_CACHE_W, SHOP_CACHE_H);
+  octx.translate(-SHOP_CACHE_OFFSET_X, -SHOP_CACHE_OFFSET_Y);
+  drawShopStaticArchitecture(octx, snappedDarkness, patterns, stockCount, tallCabinet);
+  shopStaticCacheMap.set(patterns, { key, canvas: off });
+  return off;
+}
+
+/**
+ * Layer 0 & 1: Monochrome Xuan-Paper & Sumi-Ink Backdrop, Stepped Lattice Windows,
+ * Republican Engraving Timber Beams, Plaque, Cinnabar Couplets, Baizi Paper Cabinet & Wooden Door
+ */
+export function drawShopBackdrop(ctx: CanvasRenderingContext2D, env: EnvDrawState) {
+  const { state, darkness, night, third, atSite, steps, opening, patterns, highlightedKey } = env;
+  const stockCount = Math.min(12, Math.max(0, state.s * 2));
+  const tallCabinet = state.upgrades.includes('tall_cabinet');
+
+  // 1/2/4/5/6. 稳态昼/夜复用离屏建筑缓存，一次 drawImage 贴完墙面、地板、柱梁、匾额对联与百子纸柜
+  const cachedBase = getShopStaticCanvas(darkness, patterns, stockCount, tallCabinet);
+  if (cachedBase) {
+    ctx.drawImage(cachedBase, SHOP_CACHE_OFFSET_X, SHOP_CACHE_OFFSET_Y);
+  } else {
+    drawShopStaticArchitecture(ctx, darkness, patterns, stockCount, tallCabinet);
+  }
+
+  // 3. 左右步步锦木格窗 (Xuan-paper daylight / Bone-white full moon + Dynamic Window Phenomena!)
+  drawLatticeWindow(ctx, 362, 212, 182, 206, env, false);
+  drawLatticeWindow(ctx, 608, 198, 344, 232, env, true);
+
+  // Slanted silver-white window light beam (斜照宣纸白光 / 惨白月光)
+  ctx.save();
+  const beamRGB = night ? '224, 232, 226' : '252, 246, 230';
+  const beamGrad = ctx.createLinearGradient(780, 210, 620, 610);
+  beamGrad.addColorStop(0, `rgba(${beamRGB}, ${night ? 0.14 : 0.24})`);
+  beamGrad.addColorStop(0.7, `rgba(${beamRGB}, ${night ? 0.07 : 0.11})`);
+  beamGrad.addColorStop(1, `rgba(${beamRGB}, 0)`);
+  ctx.fillStyle = beamGrad;
+  ctx.beginPath();
+  ctx.moveTo(615, 205);
+  ctx.lineTo(945, 205);
+  ctx.lineTo(840, 610);
+  ctx.lineTo(440, 610);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  drawHangingGarlands(ctx, env);
 
   // 7. 右侧老木门、铜环、告示、镇门符、门缝眼与叩门涟漪
   drawShopDoor(ctx, env, highlightedKey === 'door', opening, steps, atSite, third, night, state);
@@ -432,8 +492,13 @@ function drawHangingGarlands(ctx: CanvasRenderingContext2D, env: EnvDrawState) {
   }
 }
 
-function drawPaperCabinet(ctx: CanvasRenderingContext2D, env: EnvDrawState) {
-  const { state, darkness, patterns } = env;
+function drawPaperCabinet(
+  ctx: CanvasRenderingContext2D,
+  darkness: number,
+  patterns: ComicPatterns,
+  stockCount: number,
+  tallCabinet: boolean
+) {
   const x = 92;
   const y = 248;
   const w = 224;
@@ -452,7 +517,6 @@ function drawPaperCabinet(ctx: CanvasRenderingContext2D, env: EnvDrawState) {
   inkRect(ctx, x + w - 10, y, 10, h, cabWood, 2.0);
 
   // Stock paper rolls: mostly Xuan bone-white / aged parchment + single cinnabar accent roll!
-  const stockCount = Math.min(12, Math.max(0, state.s * 2));
   const rollColors = [
     lerpColor('#ede5d3', '#b8bdb7', darkness),
     lerpColor('#d8cfb9', '#949b97', darkness),
@@ -492,7 +556,7 @@ function drawPaperCabinet(ctx: CanvasRenderingContext2D, env: EnvDrawState) {
   inkRect(ctx, houseX + 22, houseY + 34, 18, 28, '#191817', 1.7);
 
   // P2 #10 铺面升级视觉：扩建百子珍料纸柜（加高珍料层 + 朱砂画卷）
-  if (state.upgrades.includes('tall_cabinet')) {
+  if (tallCabinet) {
     inkRect(ctx, x - 4, y - 82, w + 8, 12, cabWood, 2.1);
     for (let i = 0; i < 4; i++) {
       const rx = x + 18 + i * 50;

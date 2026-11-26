@@ -1,9 +1,11 @@
+import { getCharacterForDayOrder } from '../data/characters';
 import { buildTonightNightOrders, getScheduledNightOrder } from '../data/night';
 import { ORDER_BY_ID } from '../data/orders';
-import { STREET_SUPPLIES } from '../data/street';
+import { ALLEY_FINDS, STREET_SUPPLIES, TEAHOUSE_GOSSIPS } from '../data/street';
+import { TOWN_INTEL_DOCS } from '../data/systemShop';
 import type { ActionOption, CardIconKind, CraftMode, DayOrderDef, GameState } from '../data/types';
-import { note } from './state';
-import { syncAndClaimDailyQuests } from './systemEngine';
+import { NIGHT_DURATION_SEC, hasSkill, markCharacterMet, note, recordVisit } from './state';
+import { syncAndClaimDailyQuests, syncCodexMilestones } from './systemEngine';
 
 function pickDayOrderIcon(order: DayOrderDef): CardIconKind {
   if (order.id.includes('horse')) return 'horse';
@@ -26,7 +28,11 @@ export function costReason(state: GameState, ap: number, material = 0, cash = 0)
 }
 
 export function fulfillDayOrder(state: GameState, order: DayOrderDef, mode: CraftMode): void {
-  let apCost = order.apCost;
+  const hasNimble = hasSkill(state, 'craft_nimble');
+  const hasTrim = hasSkill(state, 'craft_trim');
+  const hasMaster = hasSkill(state, 'craft_master');
+  const baseAp = hasMaster ? Math.max(1, order.apCost - 1) : order.apCost;
+  let apCost = baseAp;
   let needS = order.needS;
   let pay = order.dayToNight ? order.dayToNight.deposit : order.payBase;
   let tyGain = order.tyReward;
@@ -39,15 +45,15 @@ export function fulfillDayOrder(state: GameState, order: DayOrderDef, mode: Craf
   }
 
   if (mode === 'rush') {
-    apCost = Math.max(1, order.apCost - 1);
-    cDelta = -1;
-    modeLabel = '赶工省时';
+    apCost = Math.max(1, baseAp - 1);
+    cDelta = hasNimble ? 0 : -1;
+    modeLabel = hasNimble ? '赶工省时（熟手不降净）' : '赶工省时';
   } else if (mode === 'fine') {
-    needS = order.needS + 1;
+    needS = hasNimble ? order.needS : order.needS + 1;
     cDelta = 1;
     tyGain += 1;
     pay += 4;
-    modeLabel = '精工加净';
+    modeLabel = hasNimble ? '精工加净（熟手免加料）' : '精工加净';
   } else if (mode === 'proxy') {
     needS = 0;
     tyGain = Math.max(-1, tyGain - 1);
@@ -62,6 +68,15 @@ export function fulfillDayOrder(state: GameState, order: DayOrderDef, mode: Craf
   state.c = Math.max(0, state.c + cDelta);
   state.h = Math.max(0, state.h + hDelta);
   state.ty = Math.max(0, state.ty + tyGain);
+
+  let trimNote = '';
+  if (hasTrim) {
+    state.craftOrderCounter = (state.craftOrderCounter ?? 0) + 1;
+    if (state.craftOrderCounter % 2 === 0) {
+      state.s += 1;
+      trimNote = '（巧裁留边回收纸料 +1）';
+    }
+  }
 
   const ptsBonus = (order.ptsReward ?? 4) + (mode === 'fine' ? 2 : 0);
   state.pts += ptsBonus;
@@ -86,12 +101,35 @@ export function fulfillDayOrder(state: GameState, order: DayOrderDef, mode: Craf
       : mode === 'fine'
         ? '，活计敞亮，洁净、口碑与系统赏金一并见长。'
         : '。';
-  note(state, `以「${modeLabel}」满足活人订单「${order.title}」，收 ${pay} 现金、+${ptsBonus} 纸火点${extra}`);
+  const profile = getCharacterForDayOrder(order);
+  markCharacterMet(state, profile.id);
+  recordVisit(state, {
+    day: state.day,
+    period: 'day',
+    characterId: profile.id,
+    guestName: profile.name,
+    orderId: order.id,
+    orderTitle: order.title,
+    kind: 'living',
+    result:
+      mode === 'fine'
+        ? 'completed_fine'
+        : mode === 'rush'
+          ? 'completed_rush'
+          : mode === 'proxy'
+            ? 'completed_proxy'
+            : 'completed_standard',
+    cashDelta: pay,
+    ptsDelta: ptsBonus,
+    note: `${modeLabel}交付${trimNote}${order.dayToNight ? '（已约今夜）' : ''}`
+  });
+  note(state, `以「${modeLabel}」满足活人订单「${order.title}」，收 ${pay} 现金、+${ptsBonus} 纸火点${trimNote}${extra}`);
   syncAndClaimDailyQuests(state);
 }
 
 export function flipToNight(state: GameState): void {
   state.phase = 'board';
+  state.phaseRemainingSec = NIGHT_DURATION_SEC;
   state.selectedOrderId = null;
   state.selectedNightOrderId = null;
   state.dialogueStep = 0;
@@ -104,6 +142,7 @@ export function flipToNight(state: GameState): void {
   if (state.restTonight && state.h < 12 && !scheduled.peak) {
     state.outcomes[state.day] = 'rested';
     state.phase = 'settle';
+    state.phaseRemainingSec = 0;
     state.settleChoreDone = false;
     state.settleChosenId = null;
     state.lastSettleSummary = '你早早落锁熄灯，今夜没有承接普通诡异单，屋里安稳到天亮。';
@@ -156,13 +195,17 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
         state.listenedOrderIds.push(order.id);
       }
 
+      const hasNimble = hasSkill(state, 'craft_nimble');
+      const hasMaster = hasSkill(state, 'craft_master');
+      const baseAp = hasMaster ? Math.max(1, order.apCost - 1) : order.apCost;
       const basePay = order.dayToNight
         ? order.dayToNight.deposit
         : state.audit && !order.reliefOnly
           ? Math.max(8, Math.round(order.payBase * 0.78))
           : order.payBase;
-      const rushAp = Math.max(1, order.apCost - 1);
-      const canRush = order.apCost > 1 && !order.reliefOnly;
+      const rushAp = Math.max(1, baseAp - 1);
+      const fineNeedS = hasNimble ? order.needS : order.needS + 1;
+      const canRush = baseAp > 1 && !order.reliefOnly;
       const canFine = !order.reliefOnly;
       const canProxy = order.needS > 0 && !order.reliefOnly;
       const basePts = order.ptsReward ?? 4;
@@ -170,11 +213,11 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
       const moves: ActionOption[] = [
         {
           id: `craft_std_${order.id}`,
-          title: order.dayToNight ? '接单 · 收订金' : '普通工艺',
-          detail: `工时−${order.apCost}${order.needS ? ` · 料−${order.needS}` : ' · 自带料'} · 现+${basePay} · 点+${basePts}`,
+          title: order.dayToNight ? '接单 · 收订金' : hasMaster ? '普通工艺 · 鬼斧省时' : '普通工艺',
+          detail: `工时−${baseAp}${order.needS ? ` · 料−${order.needS}` : ' · 自带料'} · 现+${basePay} · 点+${basePts}`,
           primary: true,
           reason:
-            costReason(state, order.apCost, order.needS) ||
+            costReason(state, baseAp, order.needS) ||
             (order.needC && state.c < order.needC ? `洁净≥${order.needC}` : ''),
           run: () => fulfillDayOrder(state, order, 'standard')
         }
@@ -183,9 +226,9 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
       if (canRush) {
         moves.push({
           id: `craft_rush_${order.id}`,
-          title: '赶工省时',
-          detail: `工时−${rushAp} · 料−${order.needS} · 洁净−1 · 现+${basePay}`,
-          reason: costReason(state, rushAp, order.needS) || (state.c < 1 ? '洁净不足' : ''),
+          title: hasNimble ? '赶工省时 · 熟手免扣净' : '赶工省时',
+          detail: `工时−${rushAp} · 料−${order.needS}${hasNimble ? ' · 免扣洁净' : ' · 洁净−1'} · 现+${basePay}`,
+          reason: costReason(state, rushAp, order.needS) || (!hasNimble && state.c < 1 ? '洁净不足' : ''),
           run: () => fulfillDayOrder(state, order, 'rush')
         });
       }
@@ -193,9 +236,9 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
       if (canFine) {
         moves.push({
           id: `craft_fine_${order.id}`,
-          title: '精工加净',
-          detail: `工时−${order.apCost} · 料−${order.needS + 1} · 洁净+1 · 现+${basePay + 4} · 点+${basePts + 2}`,
-          reason: costReason(state, order.apCost, order.needS + 1),
+          title: hasNimble ? '精工加净 · 熟手免加料' : '精工加净',
+          detail: `工时−${baseAp} · 料−${fineNeedS} · 洁净+1 · 现+${basePay + 4} · 点+${basePts + 2}`,
+          reason: costReason(state, baseAp, fineNeedS),
           run: () => fulfillDayOrder(state, order, 'fine')
         });
       }
@@ -204,9 +247,9 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
         moves.push({
           id: `craft_proxy_${order.id}`,
           title: '替代料应急',
-          detail: `工时−${order.apCost} · 免料 · 阴气+1 · 夜局面+1`,
+          detail: `工时−${baseAp} · 免料 · 阴气+1 · 夜局面+1`,
           danger: '使用替代料应急不耗纸料，但会抬高阴气，且今夜诡异履约初始局面 +1。确定如此交货？',
-          reason: costReason(state, order.apCost, 0),
+          reason: costReason(state, baseAp, 0),
           run: () => fulfillDayOrder(state, order, 'proxy')
         });
       }
@@ -248,8 +291,9 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
         ? Math.max(8, Math.round(order.payBase * 0.78))
         : order.payBase;
     const tag = order.dayToNight ? '日接夜交' : order.reliefOnly ? '止损单' : '活人委托';
+    const displayAp = hasSkill(state, 'craft_master') ? Math.max(1, order.apCost - 1) : order.apCost;
     const cardStats: Array<{ label: string; value: string; tone?: 'cost' | 'gain' | 'pts' | 'warn' }> = [
-      { label: '工时', value: `−${order.apCost}`, tone: 'cost' },
+      { label: '工时', value: `−${displayAp}`, tone: 'cost' },
       { label: '纸料', value: order.needS ? `−${order.needS}` : '自带', tone: order.needS ? 'cost' : 'gain' },
       { label: order.dayToNight ? '订金' : '现金', value: `+${payVal}`, tone: 'gain' },
       { label: '纸火点', value: `+${order.ptsReward ?? 4}`, tone: 'pts' }
@@ -274,6 +318,7 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
       run: () => {
         state.selectedOrderId = order.id;
         state.dialogueStep = heard ? Math.max(0, order.storyBeats.length - 1) : 0;
+        markCharacterMet(state, getCharacterForDayOrder(order).id);
         state.message = heard
           ? `已听清${shortClientName(order.client)}诉求。`
           : `${shortClientName(order.client)}走进铺门……`;
@@ -307,6 +352,249 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
 
 export function buildStreetMoves(state: GameState): ActionOption[] {
   const moves: ActionOption[] = [];
+  const zone = state.streetZone === 'back' ? 'back' : 'front';
+  const visitedToday = state.streetVisitedToday ?? [];
+
+  if (zone === 'back') {
+    const didTeahouse = visitedToday.includes('teahouse');
+    const didBookstore = visitedToday.includes('bookstore');
+    const didShrine = visitedToday.includes('shrine');
+    const didAlley = visitedToday.includes('alley_search');
+    const markVisited = (key: string) => {
+      state.streetVisitedToday ??= [];
+      if (!state.streetVisitedToday.includes(key)) state.streetVisitedToday.push(key);
+    };
+
+    // 1. 德昌茶楼：听茶叙旧，稳增人情、信任并降阴气
+    moves.push({
+      id: 'explore_teahouse',
+      title: '坐茶楼听街坊闲谈',
+      detail: '工时 −1 · 现金 −6 · 人情 +1 · 信任 +1 · 阴气 −1',
+      presentation: 'card',
+      card: {
+        kind: 'street_spot',
+        tag: '德昌茶楼',
+        client: '清茶听风 · 结交老街人情',
+        icon: 'teahouse',
+        stats: [
+          { label: '工时', value: '−1', tone: 'cost' },
+          { label: '现金', value: '−6', tone: 'cost' },
+          { label: '人情', value: '+1', tone: 'pts' },
+          { label: '信任', value: '+1', tone: 'gain' }
+        ],
+        statusStamp: didTeahouse ? '已叙茶' : undefined
+      },
+      reason: didTeahouse ? '今日已在茶楼坐过一回' : costReason(state, 1, 0, 6),
+      run: () => {
+        state.ap -= 1;
+        state.m -= 6;
+        state.f += 1;
+        state.ty += 1;
+        state.h = Math.max(0, state.h - 1);
+        markVisited('teahouse');
+        const rumor = TEAHOUSE_GOSSIPS[(state.day - 1) % TEAHOUSE_GOSSIPS.length];
+        note(state, `你在德昌茶楼沏茶叙旧（人情 +1，信任 +1，阴气 −1）。${rumor}`);
+      }
+    });
+
+    // 2. 墨香书肆：翻检旧县志，赚纸火点与洁净，每满 2 次免费破译 1 份未解锁小镇机密档案
+    const lockedDocs = TOWN_INTEL_DOCS.filter((d) => !(state.unlockedIntelIds ?? []).includes(d.id));
+    const nextVisitNum = (state.bookstoreVisitsTotal ?? 0) + 1;
+    const willUnlockDoc = lockedDocs.length > 0 && nextVisitNum % 2 === 0;
+    moves.push({
+      id: 'explore_bookstore',
+      title: '翻检旧县志残卷',
+      detail: willUnlockDoc
+        ? '工时 −1 · 现金 −8 · 纸火点 +10 · 洁净 +1 · 额外白得 1 份小镇密档！'
+        : '工时 −1 · 现金 −8 · 纸火点 +10 · 洁净 +1（每 2 次赠 1 份密档）',
+      presentation: 'card',
+      card: {
+        kind: 'street_spot',
+        tag: '墨香书肆',
+        client: willUnlockDoc ? '老学究书摊 · 本次必得残卷密档' : '古旧书肆 · 淘古籍赚纸火点',
+        icon: 'bookstore',
+        stats: [
+          { label: '工时', value: '−1', tone: 'cost' },
+          { label: '现金', value: '−8', tone: 'cost' },
+          { label: '纸火点', value: '+10', tone: 'pts' },
+          { label: '洁净', value: '+1', tone: 'gain' }
+        ],
+        statusStamp: didBookstore ? '已翻卷' : willUnlockDoc ? '密档' : undefined
+      },
+      reason: didBookstore ? '今日已翻检过书肆残卷' : costReason(state, 1, 0, 8),
+      run: () => {
+        state.ap -= 1;
+        state.m -= 8;
+        state.pts += 10;
+        state.c += 1;
+        state.bookstoreVisitsTotal = (state.bookstoreVisitsTotal ?? 0) + 1;
+        markVisited('bookstore');
+        markCharacterMet(state, 'elder_scholar');
+
+        const remainingDocs = TOWN_INTEL_DOCS.filter((d) => !(state.unlockedIntelIds ?? []).includes(d.id));
+        if (remainingDocs.length > 0 && state.bookstoreVisitsTotal % 2 === 0) {
+          const unlocked = remainingDocs[0];
+          state.unlockedIntelIds ??= [];
+          state.unlockedIntelIds.push(unlocked.id);
+          note(
+            state,
+            `你在墨香书肆淘出孤本残页（纸火点 +10，洁净 +1），并意外免费破译小镇密档《${unlocked.title}》！`
+          );
+        } else if (remainingDocs.length === 0 && state.bookstoreVisitsTotal % 2 === 0) {
+          state.pts += 4;
+          note(state, '墨香书肆的老学究见你识货，另赠一笔考据赏金（纸火点 +14，洁净 +1）。');
+        } else {
+          note(state, '你在墨香书肆翻阅民国旧县志，记下几段镇界掌故（纸火点 +10，洁净 +1）。');
+        }
+        syncCodexMilestones(state);
+      }
+    });
+
+    // 3. 城隍香火堂：敬香祈福，强效降阴气 + 洁净，且安抚伙计胆量
+    moves.push({
+      id: 'explore_shrine',
+      title: '城隍堂敬三炷清香',
+      detail: state.helper.hired
+        ? '工时 −1 · 现金 −10 · 阴气 −3 · 洁净 +1 · 小栓胆量 +2'
+        : '工时 −1 · 现金 −10 · 阴气 −3 · 洁净 +1',
+      presentation: 'card',
+      card: {
+        kind: 'street_spot',
+        tag: '城隍香火堂',
+        client: state.helper.hired ? '镇西古庙 · 压阴静心并护伙计' : '镇西古庙 · 上香镇煞压阴气',
+        icon: 'shrine',
+        stats: [
+          { label: '工时', value: '−1', tone: 'cost' },
+          { label: '现金', value: '−10', tone: 'cost' },
+          { label: '阴气', value: '−3', tone: 'pts' },
+          { label: '洁净', value: '+1', tone: 'gain' }
+        ],
+        statusStamp: didShrine ? '已上香' : undefined
+      },
+      reason: didShrine ? '今日已敬过香火' : costReason(state, 1, 0, 10),
+      run: () => {
+        state.ap -= 1;
+        state.m -= 10;
+        state.h = Math.max(0, state.h - 3);
+        state.c += 1;
+        if (state.helper.hired) {
+          state.helper.nerve = Math.min(10, state.helper.nerve + 2);
+        }
+        if (state.uneasy) {
+          state.uneasyCleanDays += 1;
+        }
+        markVisited('shrine');
+        note(
+          state,
+          `你在城隍香火堂虔诚敬上三炷清香：阴气 −3，洁净 +1${state.helper.hired ? '，顺带替小栓求得平安符（胆量 +2）' : ''}。`
+        );
+      }
+    });
+
+    // 4. 老槐巷石牌坊：每日老街寻宝/奇遇
+    const todayFind = ALLEY_FINDS[(state.day - 1) % ALLEY_FINDS.length];
+    const findRewardChip =
+      todayFind.rewardKind === 'paper'
+        ? { label: '纸料', value: `+${todayFind.amount}`, tone: 'gain' as const }
+        : todayFind.rewardKind === 'cash'
+          ? { label: '现金', value: `+${todayFind.amount}`, tone: 'gain' as const }
+          : todayFind.rewardKind === 'talisman'
+            ? { label: '纸符', value: `+${todayFind.amount}`, tone: 'pts' as const }
+            : { label: '纸火点', value: `+${todayFind.amount}`, tone: 'pts' as const };
+    moves.push({
+      id: 'explore_alley',
+      title: '老槐巷口巡查拾遗',
+      detail: '工时 −1 · 免费 · 细查老槐树根与石龛，每日偶得不同收获',
+      presentation: 'card',
+      card: {
+        kind: 'street_spot',
+        tag: '老槐巷',
+        client: '青石牌坊 · 每日深巷奇遇',
+        icon: 'lantern',
+        stats: [
+          { label: '工时', value: '−1', tone: 'cost' },
+          { label: '花销', value: '免费', tone: 'gain' },
+          findRewardChip
+        ],
+        statusStamp: didAlley ? '已寻毕' : undefined
+      },
+      reason: didAlley ? '今日已巡查过老槐巷口' : costReason(state, 1),
+      run: () => {
+        state.ap -= 1;
+        markVisited('alley_search');
+        if (todayFind.rewardKind === 'paper') {
+          state.s += todayFind.amount;
+        } else if (todayFind.rewardKind === 'cash') {
+          state.m += todayFind.amount;
+        } else if (todayFind.rewardKind === 'talisman') {
+          state.items.talisman += todayFind.amount;
+        } else {
+          state.pts += todayFind.amount;
+        }
+        note(state, `【老槐巷拾遗】${todayFind.narrative}`);
+        syncCodexMilestones(state);
+      }
+    });
+
+    if (state.rumor && state.day === 4) {
+      moves.push({
+        id: 'calm_rumor',
+        title: '请阿杰镇群圆场',
+        detail: '工时 −1 · 现金 −8 · 镇民信任 +1',
+        presentation: 'card',
+        card: {
+          kind: 'street_spot',
+          tag: '老槐街口',
+          client: '阿杰 · 压平镇群闲话',
+          icon: 'rumor',
+          stats: [
+            { label: '工时', value: '−1', tone: 'cost' },
+            { label: '现金', value: '−8', tone: 'cost' },
+            { label: '信任', value: '+1', tone: 'pts' }
+          ],
+          statusStamp: state.calmDone ? '已圆场' : undefined
+        },
+        reason: state.calmDone ? '今天已经圆过场' : costReason(state, 1, 0, 8),
+        run: () => {
+          state.ap -= 1;
+          state.m -= 8;
+          state.ty += 1;
+          state.calmDone = true;
+          note(state, '阿杰在镇群里接了句圆场话，街坊对铺子松了点口风。');
+        }
+      });
+    }
+
+    moves.push(
+      {
+        id: 'street_go_front',
+        title: '‹ 折返前街市集',
+        detail: '镇集杂货 · 林氏诊所 · 柳记裁缝',
+        presentation: 'control',
+        run: () => {
+          state.streetZone = 'front';
+          state.message = '你沿着骑楼廊道走回前街市集。';
+        }
+      },
+      {
+        id: 'return_to_shop',
+        title: '返回纸扎铺',
+        detail: '回柜台接单或落锁',
+        primary: true,
+        presentation: 'control',
+        run: () => {
+          state.dayTab = 'orders';
+          state.streetZone = 'front';
+          state.selectedOrderId = null;
+          state.dialogueStep = 0;
+        }
+      }
+    );
+
+    return moves;
+  }
+
+  // ===== 前街 · 市集骑楼 =====
   const supplyLimitReached = state.streetSupplyUses >= 2;
   const intelLimitReached = state.streetIntelUses >= 2;
   const informedToday = state.informedDays.includes(state.day);
@@ -410,189 +698,75 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
       }
     });
   } else {
+    const hasTrim = hasSkill(state, 'craft_trim');
+    const talismanCap = hasTrim ? 5 : 3;
+    const talismanPaperCost = hasTrim ? 0 : 1;
     moves.push({
       id: 'craft_talisman',
-      title: '预折安神纸符',
-      detail: '工时 −1 · 纸料 −1 · 夜履约可用（局面 −2）',
+      title: hasTrim ? '预折安神纸符 · 巧裁免料' : '预折安神纸符',
+      detail: hasTrim
+        ? `工时 −1 · 免耗纸料 · 夜履约可用（局面 −2，上限 ${talismanCap} 张）`
+        : '工时 −1 · 纸料 −1 · 夜履约可用（局面 −2）',
       presentation: 'card',
       card: {
         kind: 'street_spot',
         tag: '柳记裁缝铺',
-        client: `借朱砂案折符 · 现有 ×${state.items.talisman}`,
+        client: `借朱砂案折符 · 现有 ×${state.items.talisman}/${talismanCap}`,
         icon: 'charm',
         stats: [
           { label: '工时', value: '−1', tone: 'cost' },
-          { label: '纸料', value: '−1', tone: 'cost' },
+          { label: '纸料', value: hasTrim ? '免料' : '−1', tone: hasTrim ? 'gain' : 'cost' },
           { label: '局面', value: '−2', tone: 'pts' }
         ],
-        statusStamp: state.items.talisman >= 3 ? '已满' : undefined
+        statusStamp: state.items.talisman >= talismanCap ? '已满' : undefined
       },
-      reason: state.items.talisman >= 3 ? '手头已备足 3 张纸符' : costReason(state, 1, 1),
+      reason:
+        state.items.talisman >= talismanCap
+          ? `手头已备足 ${talismanCap} 张纸符`
+          : costReason(state, 1, talismanPaperCost),
       run: () => {
         state.ap -= 1;
-        state.s -= 1;
+        state.s -= talismanPaperCost;
         state.items.talisman += 1;
-        note(state, '提前折好一张朱砂安神纸符，留着夜里压局面用。');
+        note(
+          state,
+          hasTrim
+            ? '巧用边角料折好一张朱砂安神纸符（免耗纸料），留着夜里压局面用。'
+            : '提前折好一张朱砂安神纸符，留着夜里压局面用。'
+        );
       }
     });
   }
 
-  if (state.rumor && state.day === 4) {
-    moves.push({
-      id: 'calm_rumor',
-      title: '请阿杰镇群圆场',
-      detail: '工时 −1 · 现金 −8 · 镇民信任 +1',
-      presentation: 'card',
-      card: {
-        kind: 'street_spot',
-        tag: '老槐街口',
-        client: '阿杰 · 压平镇群闲话',
-        icon: 'rumor',
-        stats: [
-          { label: '工时', value: '−1', tone: 'cost' },
-          { label: '现金', value: '−8', tone: 'cost' },
-          { label: '信任', value: '+1', tone: 'pts' }
-        ],
-        statusStamp: state.calmDone ? '已圆场' : undefined
-      },
-      reason: state.calmDone ? '今天已经圆过场' : costReason(state, 1, 0, 8),
-      run: () => {
-        state.ap -= 1;
-        state.m -= 8;
-        state.ty += 1;
-        state.calmDone = true;
-        note(state, '阿杰在镇群里接了句圆场话，街坊对铺子松了点口风。');
-      }
-    });
-  }
-
-  moves.push({
-    id: 'return_to_shop',
-    title: '返回纸扎铺',
-    detail: '回柜台接单或落锁',
-    primary: true,
-    presentation: 'control',
-    run: () => {
-      state.dayTab = 'orders';
-      state.selectedOrderId = null;
-      state.dialogueStep = 0;
-    }
-  });
-
-  return moves;
-}
-
-export function buildShopMoves(state: GameState): ActionOption[] {
-  const moves: ActionOption[] = [
+  const backUnvisited = 4 - visitedToday.length;
+  moves.push(
     {
-      id: 'clean_shop',
-      title: '扫灰焚香净铺',
-      detail: state.uneasy
-        ? '工时 −1 · 纸料 −1 · 洁净 +2 · 阴气 −1 · 助消「不对劲」'
-        : '工时 −1 · 纸料 −1 · 洁净 +2 · 阴气 −1',
-      reason: costReason(state, 1, 1),
+      id: 'street_go_back',
+      title: '往深街旧坊走 ›',
+      detail:
+        state.rumor && state.day === 4 && !state.calmDone
+          ? '阿杰在老槐巷 · 另有茶楼/书肆/香火堂'
+          : `茶楼 · 书肆 · 香火堂 · 老槐巷（余 ${Math.max(0, backUnvisited)} 处可探）`,
+      presentation: 'control',
       run: () => {
-        state.ap -= 1;
-        state.s -= 1;
-        state.c += 2;
-        state.h = Math.max(0, state.h - 1);
-        if (state.uneasy && state.uneasyCleanDays >= 1) {
-          state.uneasy = false;
-          state.uneasyCleanDays = 0;
-          note(state, '扫净香灰并走完一遍洁净仪轨，铺里那股「不对劲」终于散尽了。');
-        } else {
-          note(state, '扫净柜台香灰，铺子里透亮了些，阴气也散了一截。');
-        }
+        state.streetZone = 'back';
+        state.message = '你穿过骑楼拱廊，步入烟火深处的后街旧坊。';
+      }
+    },
+    {
+      id: 'return_to_shop',
+      title: '返回纸扎铺',
+      detail: '回柜台接单或落锁',
+      primary: true,
+      presentation: 'control',
+      run: () => {
+        state.dayTab = 'orders';
+        state.streetZone = 'front';
+        state.selectedOrderId = null;
+        state.dialogueStep = 0;
       }
     }
-  ];
-
-  // P2 #11: 雇佣伙计小栓 / 安抚胆量
-  if (!state.helper.hired) {
-    moves.push({
-      id: 'hire_helper',
-      title: '雇佣镇上伙计 · 小栓',
-      detail: '工时 −1 · 现金 −25 · 初始胆量 6（夜履约可搭手减压 −1，胆量 ≤ 2 会拒夜班）',
-      reason: costReason(state, 1, 0, 25),
-      run: () => {
-        state.ap -= 1;
-        state.m -= 25;
-        state.helper.hired = true;
-        state.helper.nerve = 6;
-        note(state, '雇下街口小栓当帮工（胆量 6），夜里忙不过来时可喊他搭一把手。');
-      }
-    });
-  } else if (state.helper.nerve < 9) {
-    moves.push({
-      id: 'calm_helper',
-      title: `安抚伙计小栓（当前胆量 ${state.helper.nerve}/10）`,
-      detail: '工时 −1 · 现金 −10 · 胆量 +2（恢复夜班搭手状态）',
-      reason: costReason(state, 1, 0, 10),
-      run: () => {
-        state.ap -= 1;
-        state.m -= 10;
-        state.helper.nerve = Math.min(10, state.helper.nerve + 2);
-        note(state, `给小栓买了热汤压惊，胆量回升至 ${state.helper.nerve}。`);
-      }
-    });
-  }
-
-  // P2 #11: 具名人情卡「陈婶街坊圆场」
-  if (state.favorCards.includes('card_chen')) {
-    moves.push({
-      id: 'use_card_chen',
-      title: '动用人情卡 · 陈婶街坊圆场',
-      detail: '不耗工时 · 镇民信任 +2 · 直接消解当前镇群传闻',
-      run: () => {
-        state.favorCards = state.favorCards.filter((c) => c !== 'card_chen');
-        state.ty += 2;
-        state.rumor = false;
-        state.calmDone = true;
-        note(state, '请陈婶拎着保温袋在街口替你说了几句好话：镇民信任 +2，传闻彻底压平。');
-      }
-    });
-  }
-
-  if (state.handle > 0) {
-    moves.push({
-      id: 'wash_handle',
-      title: '花钱托人洗掉一笔把柄',
-      detail: '工时 −1 · 现金 −24 · 把柄 −1（本局限洗 1 次）',
-      reason: state.washedHandleThisRun ? '本局已洗过一次把柄' : costReason(state, 1, 0, 24),
-      run: () => {
-        state.ap -= 1;
-        state.m -= 24;
-        state.handle = Math.max(0, state.handle - 1);
-        state.washedHandleThisRun = true;
-        note(state, '托镇上熟人把那笔把柄抹平了，夜账里少了一根刺。');
-      }
-    });
-  }
-
-  const nightPreview = getScheduledNightOrder(state.day, state.h);
-  if (!nightPreview.peak && (state.day === 4 || state.h >= 10) && (state.rumor || state.h >= 10)) {
-    moves.push({
-      id: 'rest_tonight',
-      title: '收拾铺面，今晚歇一晚',
-      detail: '工时 −1 · 阴气 −2 · 阴气 < 12 时今晚不接普通诡异单',
-      reason: state.restTonight ? '已安排今晚歇铺' : costReason(state, 1),
-      run: () => {
-        state.ap -= 1;
-        state.h = Math.max(0, state.h - 2);
-        state.restTonight = true;
-        note(state, '把柜台收拾利索，打算天黑就落锁歇一晚。');
-      }
-    });
-  }
-
-  moves.push({
-    id: 'night',
-    title: '落锁入夜',
-    detail: '翻开夜账迎客',
-    primary: true,
-    presentation: 'control',
-    run: () => flipToNight(state)
-  });
+  );
 
   return moves;
 }

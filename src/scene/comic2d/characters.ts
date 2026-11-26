@@ -11,6 +11,15 @@ import {
   inkRect,
   lerpColor
 } from './textures';
+import {
+  drawAshCollectorGuest,
+  drawFerryGhostGuest,
+  drawLanternChildGuest,
+  drawOperaGhostGuest,
+  drawPaperBrideGuest,
+  drawTailorGhostGuest,
+  drawTempleDeityGuest
+} from './specialGuests';
 
 export interface PaperDollDrawOpts {
   x: number;
@@ -558,18 +567,25 @@ export function drawComicPaperHorse(ctx: CanvasRenderingContext2D, opts: PaperHo
 export type GuestVariant =
   | 'day_villager'
   | 'chen_auntie'
+  | 'merchant_woman'
   | 'doctor_lin'
+  | 'elder_scholar'
+  | 'boatman_day'
   | 'night_auntie'
   | 'paper_boy'
+  | 'lantern_child'
   | 'wu_day'
   | 'wu_night'
   | 'masked_wu'
   | 'ajie_day'
   | 'ajie_night'
   | 'umbrella'
+  | 'ferry_ghost'
   | 'old_accountant'
   | 'paper_bride'
   | 'mirror_guest'
+  | 'tailor_ghost'
+  | 'ash_collector'
   | 'temple_deity'
   | 'opera_ghost';
 
@@ -630,29 +646,67 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
   const isMirrorGuest = variant === 'mirror_guest';
   const isTempleDeity = variant === 'temple_deity';
   const isOperaGhost = variant === 'opera_ghost';
-  const isAuntie = variant === 'chen_auntie' || variant === 'night_auntie';
+  const isMerchantWoman = variant === 'merchant_woman';
+  const isAuntie = variant === 'chen_auntie' || variant === 'night_auntie' || isMerchantWoman;
   const isNightAuntie = variant === 'night_auntie';
   const isDoctor = variant === 'doctor_lin';
+  const isElder = variant === 'elder_scholar';
+  const isBoatmanDay = variant === 'boatman_day';
 
-  // D6 顶格 · 无轿纸新娘 (Stark Cinnabar Bridal Veil & Crimson Wedding Robe!)
+  // 7 位专属精绘诡客独立通道
   if (isPaperBride) {
     drawPaperBrideGuest(ctx, breath, armRaised, seconds, slow, patterns);
     ctx.restore();
     return;
   }
-
-  // D10 庙会顶格 · 百戏游神 (Tall Antique Paper-Mask Temple Deity + Twin Cinnabar Banners!)
   if (isTempleDeity) {
     drawTempleDeityGuest(ctx, breath, seconds, slow, patterns);
     ctx.restore();
     return;
   }
-
-  // D13 顶格 · 空椅听戏诡 (Opera Painted-Face Silhouette + Flowing White Water Sleeves!)
   if (isOperaGhost) {
     drawOperaGhostGuest(ctx, breath, seconds, slow, patterns);
     ctx.restore();
     return;
+  }
+  if (variant === 'ferry_ghost') {
+    drawFerryGhostGuest(ctx, breath, armRaised, seconds, slow, threat, patterns);
+    ctx.restore();
+    return;
+  }
+  if (variant === 'tailor_ghost') {
+    drawTailorGhostGuest(ctx, breath, armRaised, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+  if (variant === 'ash_collector') {
+    drawAshCollectorGuest(ctx, breath, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+  if (variant === 'lantern_child') {
+    drawLanternChildGuest(ctx, breath, seconds, slow, patterns);
+    ctx.restore();
+    return;
+  }
+
+  // 白天渡口老船工/香客：背挂青竹斗笠剪影
+  if (isBoatmanDay) {
+    ctx.save();
+    ctx.translate(0, -186 + breath * 0.5);
+    ctx.fillStyle = '#9e9278';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 56, 36, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(20, 18, 16, 0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 36, 22, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   // D4 Cross-Alley Dripping Black Oil-Paper Umbrella
@@ -715,42 +769,54 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
   const coatColor = isUmbrella
     ? '#131517'
     : isDoctor
-      ? '#dcd6c6'
+      ? '#e2dcd0'
       : isNightAuntie
         ? '#24292c'
-        : isAuntie
-          ? '#4b4d52'
-          : isAccountant || isMirrorGuest
-            ? '#212325'
-            : variant === 'wu_day'
-              ? '#4d4d48'
-              : variant === 'wu_night' || isMaskedWu
-                ? '#222426'
-                : isAjie
-                  ? '#474c4e'
-                  : isPaperBoy
-                    ? '#4b453d'
-                    : '#534f47';
+        : isMerchantWoman
+          ? '#32363c'
+          : isAuntie
+            ? '#4b4d52'
+            : isElder
+              ? '#34363a'
+              : isBoatmanDay
+                ? '#6c624e'
+                : isAccountant || isMirrorGuest
+                  ? '#212325'
+                  : variant === 'wu_day'
+                    ? '#4d4d48'
+                    : variant === 'wu_night' || isMaskedWu
+                      ? '#222426'
+                      : isAjie
+                        ? '#474c4e'
+                        : isPaperBoy
+                          ? '#4b453d'
+                          : '#534f47';
 
   const coatShadow = isUmbrella
     ? '#0a0b0c'
     : isDoctor
-      ? '#b3ac9c'
+      ? '#b8b1a1'
       : isNightAuntie
         ? '#121518'
-        : isAuntie
-          ? '#2e3136'
-          : isAccountant || isMirrorGuest
-            ? '#121415'
-            : variant === 'wu_day'
-              ? '#31312e'
-              : variant === 'wu_night' || isMaskedWu
-                ? '#131416'
-                : isAjie
-                  ? '#2d3133'
-                  : isPaperBoy
-                    ? '#2f2b27'
-                    : '#35322d';
+        : isMerchantWoman
+          ? '#1e2126'
+          : isAuntie
+            ? '#2e3136'
+            : isElder
+              ? '#1d1f22'
+              : isBoatmanDay
+                ? '#474032'
+                : isAccountant || isMirrorGuest
+                  ? '#121415'
+                  : variant === 'wu_day'
+                    ? '#31312e'
+                    : variant === 'wu_night' || isMaskedWu
+                      ? '#131416'
+                      : isAjie
+                        ? '#2d3133'
+                        : isPaperBoy
+                          ? '#2f2b27'
+                          : '#35322d';
 
   const skinColor = isUmbrella
     ? '#16181a'
@@ -851,6 +917,10 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
     if (variant === 'wu_day') {
       inkRect(ctx, -34, -bodyH + 56, 20, 18, coatShadow, 1.7);
       inkRect(ctx, 14, -bodyH + 56, 20, 18, coatShadow, 1.7);
+      // 胸袋钢笔夹 + 下摆口袋
+      inkLine(ctx, -20, -bodyH + 50, -20, -bodyH + 62, 2.2, '#e6d8b4');
+      inkRect(ctx, -36, -bodyH + 106, 24, 22, coatShadow, 1.6);
+      inkRect(ctx, 12, -bodyH + 106, 24, 22, coatShadow, 1.6);
     }
   } else if (isAjie) {
     // Hooded jacket with crisp pale drawstrings
@@ -865,15 +935,65 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
     inkLine(ctx, 9, -bodyH + 22, 12, -bodyH + 62, 1.9, '#ebe5d6');
     inkPoly(ctx, [[-26, -bodyH + 114], [26, -bodyH + 114], [32, -bodyH + 150], [-32, -bodyH + 150]], 'rgba(14,15,16,0.34)', 1.7);
   } else if (isAccountant || isMirrorGuest) {
-    // Antique Republican changshan (民国长衫) with white stand collar & frog buttons
+    // Antique Republican changshan (民国长衫) with white stand collar, dark vest & pocket-watch chain
     inkPoly(ctx, [[-14, -bodyH - 4], [14, -bodyH - 4], [16, -bodyH + 8], [-16, -bodyH + 8]], '#efe8d8', 1.9);
     inkLine(ctx, -10, -bodyH + 8, 24, -bodyH + 38, 2.1, '#cfc8b8');
     inkLine(ctx, 24, -bodyH + 38, 24, -4, 1.9, '#cfc8b8');
     for (let i = 0; i < 4; i++) {
       inkLine(ctx, 14, -bodyH + 48 + i * 24, 30, -bodyH + 48 + i * 24, 2.0, '#e5decb');
     }
+    if (isAccountant) {
+      // 怀表铜链
+      ctx.strokeStyle = '#d4c294';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(22, -bodyH + 74);
+      ctx.quadraticCurveTo(0, -bodyH + 98, -22, -bodyH + 84);
+      ctx.stroke();
+    }
+  } else if (isElder) {
+    // 民国乡绅/戏班班主/老学究：对襟马褂配浅色长袍立领与铜扣
+    inkPoly(ctx, [[-14, -bodyH - 4], [14, -bodyH - 4], [16, -bodyH + 9], [-16, -bodyH + 9]], '#f2ead8', 1.9);
+    inkPoly(
+      ctx,
+      [[-38, -bodyH + 14], [38, -bodyH + 14], [42, -bodyH + 112], [-42, -bodyH + 112]],
+      '#222427',
+      2.0,
+      INK,
+      patterns.woodcutH
+    );
+    inkLine(ctx, 0, -bodyH + 9, 0, -bodyH + 112, 2.0, '#d8cfb8');
+    for (let i = 0; i < 4; i++) {
+      inkLine(ctx, -10, -bodyH + 28 + i * 22, 10, -bodyH + 28 + i * 22, 1.8, '#e3d8be');
+    }
+  } else if (isBoatmanDay) {
+    // 渡口老船工 / 香客：草蓑衣披肩与粗布腰带
+    inkPoly(
+      ctx,
+      [[-46, -bodyH + 14], [46, -bodyH + 14], [54, -bodyH + 78], [-54, -bodyH + 78]],
+      '#84765a',
+      2.1,
+      INK,
+      patterns.hatchLight
+    );
+    for (let i = -3; i <= 3; i++) {
+      inkLine(ctx, i * 12, -bodyH + 22, i * 14, -bodyH + 78, 1.3, 'rgba(24, 20, 16, 0.55)');
+    }
+    inkRect(ctx, -38, -bodyH + 96, 76, 12, '#2d2822', 1.8);
+    // 斜挎黄布香袋带
+    inkLine(ctx, -26, -bodyH + 12, 32, -bodyH + 98, 3.0, '#d8c38c');
+  } else if (isMerchantWoman) {
+    // 柳裁缝 / 茶馆老板娘：民国暗纹斜襟袄裙 + 朱砂细滚边与盘扣
+    inkPoly(ctx, [[-13, -bodyH - 4], [13, -bodyH - 4], [15, -bodyH + 9], [-15, -bodyH + 9]], '#f4ecd8', 1.9);
+    inkLine(ctx, -10, -bodyH + 9, 24, -bodyH + 38, 2.2, CINNABAR);
+    inkLine(ctx, 24, -bodyH + 38, 26, -6, 2.0, CINNABAR);
+    for (let i = 0; i < 4; i++) {
+      inkLine(ctx, 14, -bodyH + 46 + i * 22, 28, -bodyH + 46 + i * 22, 1.8, '#ebd8a4');
+    }
+    // 腰际丝帕配饰
+    inkPoly(ctx, [[-26, -bodyH + 96], [-10, -bodyH + 96], [-14, -bodyH + 126], [-28, -bodyH + 120]], '#ebe3cf', 1.5);
   } else if (isAuntie) {
-    // Republican-era folk woman side-buttoned cloth blouse (民国斜襟布褂)
+    // Republican-era folk woman side-buttoned cloth blouse (民国斜襟布褂 + 滚花边)
     inkPoly(ctx, [[-13, -bodyH - 4], [13, -bodyH - 4], [15, -bodyH + 8], [-15, -bodyH + 8]], '#efe8d8', 1.8);
     inkLine(ctx, -10, -bodyH + 8, 22, -bodyH + 34, 2.0, isNightAuntie ? CINNABAR : '#dcd4c0');
     inkLine(ctx, 22, -bodyH + 34, 24, -8, 1.8, isNightAuntie ? CINNABAR : '#dcd4c0');
@@ -881,12 +1001,29 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
       inkLine(ctx, 14, -bodyH + 44 + i * 24, 28, -bodyH + 44 + i * 24, 1.8, '#eae2d0');
     }
   } else if (isDoctor) {
-    // Neat pale clinic coat / scholar lapel with dark tie/collar
-    inkPoly(ctx, [[-14, -bodyH - 2], [14, -bodyH - 2], [0, -bodyH + 36]], '#2c2f32', 1.8);
-    inkPoly(ctx, [[-16, -bodyH], [-3, -bodyH + 36], [-26, -bodyH + 42]], '#f2ece0', 1.9);
-    inkPoly(ctx, [[16, -bodyH], [3, -bodyH + 36], [26, -bodyH + 42]], '#f2ece0', 1.9);
-    inkLine(ctx, 0, -bodyH + 36, 0, -4, 1.9, INK);
-    inkRect(ctx, -34, -bodyH + 64, 18, 20, '#cbc4b3', 1.5);
+    // 林医生：浆洗白大褂 + 领带 + 颈挂银色听诊器
+    inkPoly(ctx, [[-14, -bodyH - 2], [14, -bodyH - 2], [0, -bodyH + 38]], '#26292c', 1.8);
+    inkLine(ctx, 0, -bodyH + 2, 0, -bodyH + 34, 3.2, '#141517');
+    inkPoly(ctx, [[-16, -bodyH], [-3, -bodyH + 38], [-28, -bodyH + 44]], '#f6f0e4', 1.9);
+    inkPoly(ctx, [[16, -bodyH], [3, -bodyH + 38], [28, -bodyH + 44]], '#f6f0e4', 1.9);
+    inkLine(ctx, 0, -bodyH + 38, 0, -4, 1.9, INK);
+    inkRect(ctx, -36, -bodyH + 64, 20, 22, '#cfc8b8', 1.5);
+    // 听诊器皮管与听诊头
+    ctx.strokeStyle = '#1b1d1f';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(-14, -bodyH + 2);
+    ctx.bezierCurveTo(-24, -bodyH + 36, -12, -bodyH + 74, -22, -bodyH + 88);
+    ctx.moveTo(14, -bodyH + 2);
+    ctx.bezierCurveTo(22, -bodyH + 34, 16, -bodyH + 62, 20, -bodyH + 76);
+    ctx.stroke();
+    ctx.fillStyle = '#d4d0c4';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(20, -bodyH + 80, 5.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
   } else if (isPaperBoy) {
     // Folk vest with cinnabar red piping (一点朱砂滚边)
     inkPoly(ctx, [[-14, -bodyH - 4], [14, -bodyH - 4], [14, -bodyH + 8], [-14, -bodyH + 8]], '#f2ece0', 1.9);
@@ -894,11 +1031,13 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
     inkLine(ctx, 16, -bodyH + 6, 18, -10, 2.4, CINNABAR);
     inkLine(ctx, 0, -bodyH + 8, 0, -10, 1.9, INK);
   } else {
-    // Everyday Republican-style cloth jacket with pale collar trim
-    inkPoly(ctx, [[-15, -bodyH - 4], [15, -bodyH - 4], [24, -bodyH + 20], [0, -bodyH + 32], [-24, -bodyH + 20]], '#3f3d38', 2.0);
-    inkLine(ctx, -15, -bodyH - 4, 0, -bodyH + 30, 1.4, '#e5decb');
-    inkLine(ctx, 15, -bodyH - 4, 0, -bodyH + 30, 1.4, '#e5decb');
-    inkLine(ctx, 0, -bodyH + 32, 0, -4, 2.0, INK);
+    // 寻常活人主顾：民国立领短打 + 斜挎布包带 + 怀袋
+    inkPoly(ctx, [[-14, -bodyH - 4], [14, -bodyH - 4], [16, -bodyH + 8], [-16, -bodyH + 8]], '#ece4d2', 1.9);
+    inkPoly(ctx, [[-15, -bodyH + 8], [15, -bodyH + 8], [24, -bodyH + 24], [0, -bodyH + 34], [-24, -bodyH + 24]], '#3d3b36', 1.9);
+    inkLine(ctx, 0, -bodyH + 34, 0, -4, 2.0, INK);
+    inkLine(ctx, -28, -bodyH + 14, 30, -bodyH + 114, 4.2, '#2a2723');
+    inkLine(ctx, -28, -bodyH + 14, 30, -bodyH + 114, 1.3, '#c8bfa9');
+    inkRect(ctx, -34, -bodyH + 56, 18, 18, coatShadow, 1.5);
   }
 
   // 3. Right Arm & Signature Prop
@@ -937,8 +1076,14 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
   } else if (variant === 'ajie_day') {
     inkRect(ctx, handX - 10, handY - 26, 20, 34, '#141516', 1.9);
     inkRect(ctx, handX - 7, handY - 22, 14, 24, '#e3e8e2', 1);
+  } else if (isMerchantWoman) {
+    // 茶馆老板娘 / 柳裁缝：朱砂镶边卷轴 / 门神画卷
+    inkRect(ctx, handX - 18, handY - 12, 36, 12, '#efe6d0', 1.9);
+    inkLine(ctx, handX - 18, handY - 6, handX + 18, handY - 6, 2.0, CINNABAR);
+    inkRect(ctx, handX - 22, handY - 13, 5, 14, '#2a221e', 1.4);
+    inkRect(ctx, handX + 17, handY - 13, 5, 14, '#2a221e', 1.4);
   } else if (isAuntie) {
-    // Woven folk bamboo basket (竹篮) — eerie night version holds a faint red paper charm inside
+    // Woven folk bamboo basket (竹篮) — daytime holds white paper lantern, eerie night holds red charm
     inkPoly(
       ctx,
       [
@@ -959,11 +1104,40 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
     ctx.stroke();
     if (isNightAuntie) {
       inkRect(ctx, handX - 6, handY - 6, 12, 12, CINNABAR, 1.4);
+    } else {
+      inkPoly(ctx, [[handX - 12, handY + 4], [handX + 12, handY + 4], [handX + 9, handY - 6], [handX - 9, handY - 6]], '#f4eedf', 1.5);
     }
   } else if (isDoctor) {
-    // Small leather satchel / folio book
-    inkRect(ctx, handX - 16, handY + 2, 32, 24, '#36322e', 2.0);
-    inkLine(ctx, handX - 16, handY + 10, handX + 16, handY + 10, 1.6, '#d9d0be');
+    // 林医生出诊皮箱 + 朱砂十字徽章
+    inkRect(ctx, handX - 18, handY + 2, 36, 26, '#322e2a', 2.1);
+    inkLine(ctx, handX - 18, handY + 10, handX + 18, handY + 10, 1.5, '#d9d0be');
+    inkRect(ctx, handX - 6, handY + 13, 12, 12, CINNABAR, 1.2);
+    inkLine(ctx, handX, handY + 15, handX, handY + 23, 2.0, '#fff7e8');
+    inkLine(ctx, handX - 4, handY + 19, handX + 4, handY + 19, 2.0, '#fff7e8');
+  } else if (isElder) {
+    // 乡绅/班主/老学究：红漆木匣 / 线装县志
+    inkRect(ctx, handX - 20, handY - 6, 38, 26, '#5c1f19', 2.1);
+    inkLine(ctx, handX - 20, handY + 4, handX + 18, handY + 4, 1.8, '#e8d6a8');
+    inkRect(ctx, handX - 4, handY + 1, 7, 7, '#e8d6a8', 1.2);
+  } else if (isBoatmanDay) {
+    // 老船工 / 香客：折好的素白平安纸船
+    inkPoly(
+      ctx,
+      [
+        [handX - 22, handY + 4],
+        [handX + 22, handY + 4],
+        [handX + 14, handY + 18],
+        [handX - 14, handY + 18]
+      ],
+      '#f4eedf',
+      1.9
+    );
+    inkPoly(ctx, [[handX - 10, handY + 4], [handX, handY - 12], [handX + 10, handY + 4]], '#efe6d2', 1.8);
+  } else if (variant === 'day_villager') {
+    // 寻常活人：卷起的委托纸单 / 铜钥匙
+    inkRect(ctx, handX - 12, handY - 10, 22, 16, '#f2ead8', 1.8);
+    inkLine(ctx, handX - 7, handY - 4, handX + 5, handY - 4, 1.3, CINNABAR);
+    inkLine(ctx, handX - 7, handY + 1, handX + 5, handY + 1, 1.2, INK);
   } else if (isPaperBoy) {
     inkPoly(
       ctx,
@@ -1067,16 +1241,48 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
     inkPoly(ctx, [[-50, -14], [50, -14], [32, -25], [-32, -25]], '#111213', 2.2);
     inkPoly(ctx, [[-24, -25], [24, -25], [18, -48], [-18, -48]], '#1e2022', 2.2);
     inkLine(ctx, -23, -27, 23, -27, 2.2, '#e3dac7');
+  } else if (isElder) {
+    // 民国瓜皮小帽 + 玉顶帽结
+    ctx.fillStyle = '#18191b';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2.3;
+    ctx.beginPath();
+    ctx.arc(0, -17, 25, Math.PI * 1.04, Math.PI * 1.96);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    inkLine(ctx, -23, -17, 23, -17, 2.4, '#dcd2ba');
+    ctx.fillStyle = CINNABAR;
+    ctx.beginPath();
+    ctx.arc(0, -43, 4.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
   } else if (isAuntie) {
-    // Neat folk bun hair with hairpin (发髻与木簪)
+    // Neat folk bun hair with hairpin (发髻与木簪/银簪；老板娘加珍珠耳坠)
     ctx.fillStyle = '#141313';
     ctx.strokeStyle = INK;
     ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.arc(0, -39, 13, 0, Math.PI * 2);
+    ctx.arc(isMerchantWoman ? 14 : 0, isMerchantWoman ? -26 : -39, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    inkLine(ctx, -20, -40, 20, -37, 2.2, isNightAuntie ? CINNABAR : '#d8ccb4');
+    inkLine(
+      ctx,
+      isMerchantWoman ? -8 : -20,
+      isMerchantWoman ? -34 : -40,
+      isMerchantWoman ? 28 : 20,
+      isMerchantWoman ? -22 : -37,
+      2.2,
+      isNightAuntie ? CINNABAR : isMerchantWoman ? '#efe7d2' : '#d8ccb4'
+    );
+    if (isMerchantWoman) {
+      ctx.fillStyle = '#f5efe0';
+      ctx.beginPath();
+      ctx.arc(-23, 12, 3.2, 0, Math.PI * 2);
+      ctx.arc(23, 12, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
     inkPoly(
       ctx,
       [
@@ -1210,6 +1416,28 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
       }
       inkLine(ctx, -3.5, -3, 3.5, -3, 1.6, INK);
       inkLine(ctx, -6, 16, 6, 16, 1.5, INK);
+    } else if (isElder) {
+      // 长者/班主/老学究：花白细眉、圆框老花镜与山羊短须
+      inkLine(ctx, -16, -11, -4, -9, 2.0, '#6e6a62');
+      inkLine(ctx, 4, -9, 16, -11, 2.0, '#6e6a62');
+      for (const ex of [-9.5, 9.5]) {
+        ctx.fillStyle = 'rgba(244, 240, 228, 0.34)';
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(ex, -3, 6.0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#111010';
+        ctx.beginPath();
+        ctx.arc(ex, -3, 1.75, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      inkLine(ctx, -3.5, -3, 3.5, -3, 1.4, INK);
+      // 儒雅花白八字胡与山羊须
+      inkLine(ctx, -10, 13, -2, 11, 2.0, '#78736a');
+      inkLine(ctx, 2, 11, 10, 13, 2.0, '#78736a');
+      inkPoly(ctx, [[-6, 22], [6, 22], [3, 36], [-3, 36]], '#7b766c', 1.4);
     } else if (isDoctor) {
       inkLine(ctx, -16, -10, -4, -9, 1.9, INK);
       inkLine(ctx, 4, -9, 16, -10, 1.9, INK);
@@ -1290,191 +1518,3 @@ export function drawComicGuest(ctx: CanvasRenderingContext2D, opts: GuestDrawOpt
 }
 
 export { CINNABAR_DARK };
-
-/** D6 顶格诡异 · 无轿纸新娘 (Crimson Bridal Veil & Stark Paper Hands) */
-function drawPaperBrideGuest(
-  ctx: CanvasRenderingContext2D,
-  breath: number,
-  armRaised: boolean,
-  seconds: number,
-  slow: boolean,
-  patterns: ComicPatterns
-) {
-  const sway = slow ? 0 : Math.sin(seconds * 1.1) * 3;
-  ctx.save();
-  ctx.translate(sway * 0.4, breath * 0.6);
-
-  drawInkWashBlot(ctx, 0, -145, 130, 175, 0.56, '145, 24, 20');
-
-  // Crimson silk bridal robe with dark ink folds
-  const grad = ctx.createLinearGradient(-52, -195, 52, 0);
-  grad.addColorStop(0, '#a6221b');
-  grad.addColorStop(0.5, '#7c1714');
-  grad.addColorStop(1, '#360b0c');
-  inkPoly(
-    ctx,
-    [[-18, -196], [18, -196], [52, -162], [58, 0], [-58, 0], [-52, -162]],
-    grad,
-    2.6,
-    INK,
-    patterns.woodcutV
-  );
-  // Gold embroidered cloud-shoulder collar (云肩)
-  inkPoly(ctx, [[-44, -172], [0, -140], [44, -172], [20, -194], [-20, -194]], '#d8c292', 2.0);
-  inkLine(ctx, -30, -168, 0, -148, 1.6, CINNABAR);
-  inkLine(ctx, 30, -168, 0, -148, 1.6, CINNABAR);
-
-  // Extended pale paper hands holding red wedding silk knot
-  const hy = armRaised ? -112 : -92;
-  inkPoly(ctx, [[-26, hy - 8], [-12, hy - 8], [-10, hy + 14], [-24, hy + 14]], '#f6f0e2', 1.9);
-  inkPoly(ctx, [[12, hy - 8], [26, hy - 8], [24, hy + 14], [10, hy + 14]], '#f6f0e2', 1.9);
-  inkLine(ctx, -18, hy + 4, 18, hy + 4, 3.2, CINNABAR);
-  inkLine(ctx, 0, hy + 4, 0, hy + 46, 2.4, CINNABAR);
-
-  // Phoenix bridal crown silhouette under draping crimson veil (红盖头)
-  const veilSway = slow ? 0 : Math.sin(seconds * 1.6) * 4;
-  inkPoly(
-    ctx,
-    [[-22, -258], [22, -258], [32, -238], [-32, -238]],
-    '#221c1a',
-    2.2
-  );
-  inkPoly(
-    ctx,
-    [
-      [-32, -242],
-      [32, -242],
-      [40 + veilSway, -172],
-      [0 + veilSway * 0.6, -158],
-      [-40 + veilSway, -172]
-    ],
-    '#c6261d',
-    2.6,
-    INK,
-    patterns.hatchLight
-  );
-  // Gold tassel trim at bottom of veil
-  inkLine(ctx, -38 + veilSway, -172, 0 + veilSway * 0.6, -158, 2.6, '#efe0b4');
-  inkLine(ctx, 0 + veilSway * 0.6, -158, 38 + veilSway, -172, 2.6, '#efe0b4');
-
-  drawComicSfx(ctx, '唢…', -78, -235, 19, 0.66, 'crimson', -0.12);
-  ctx.restore();
-}
-
-/** D10 庙会顶格 · 百戏游神 (Tall Paper-Mask Deity with Twin Cinnabar Procession Banners) */
-function drawTempleDeityGuest(
-  ctx: CanvasRenderingContext2D,
-  breath: number,
-  seconds: number,
-  slow: boolean,
-  patterns: ComicPatterns
-) {
-  const wave = slow ? 0 : Math.sin(seconds * 1.4) * 5;
-  ctx.save();
-  ctx.translate(0, breath * 0.5);
-
-  // Twin crimson procession banners rising behind shoulders (游神双朱砂靠旗)
-  for (const side of [-1, 1]) {
-    inkLine(ctx, side * 34, -180, side * 86, -290, 3.2, '#241c18');
-    inkPoly(
-      ctx,
-      [
-        [side * 86, -290],
-        [side * 124 + wave, -264],
-        [side * 102 + wave * 0.5, -214],
-        [side * 64, -242]
-      ],
-      CINNABAR,
-      2.2,
-      INK,
-      patterns.woodcutV
-    );
-  }
-
-  // Towering dark ceremonial robe with bold white bone trim
-  inkPoly(ctx, [[-26, -222], [26, -222], [68, -186], [74, 0], [-74, 0], [-68, -186]], '#1a1c1e', 2.8, INK, patterns.hatchDense);
-  inkPoly(ctx, [[-40, -216], [0, -148], [40, -216]], '#ece5d4', 2.2);
-  inkPoly(ctx, [[-28, -212], [0, -162], [28, -212]], CINNABAR, 1.8);
-
-  // Tall antique ceremonial paper mask head (高冠古纸面)
-  inkRect(ctx, -22, -310, 44, 34, '#181819', 2.4);
-  inkLine(ctx, -20, -290, 20, -290, 2.6, '#ece2c6');
-  inkPoly(
-    ctx,
-    [[-28, -276], [28, -276], [24, -224], [0, -214], [-24, -224]],
-    '#f4ede0',
-    2.6,
-    INK,
-    patterns.woodcutV
-  );
-  // Painted red deity forehead flame & piercing ink eyes
-  inkPoly(ctx, [[0, -270], [8, -256], [0, -248], [-8, -256]], CINNABAR, 1.4);
-  inkLine(ctx, -18, -248, -5, -244, 2.8, INK);
-  inkLine(ctx, 5, -244, 18, -248, 2.8, INK);
-  ctx.fillStyle = CINNABAR;
-  ctx.beginPath();
-  ctx.arc(-11, -240, 2.8, 0, Math.PI * 2);
-  ctx.arc(11, -240, 2.8, 0, Math.PI * 2);
-  ctx.fill();
-
-  drawComicSfx(ctx, '咚…', -92, -255, 22, 0.72, 'crimson', -0.08);
-  ctx.restore();
-}
-
-/** D13 顶格 · 空椅听戏诡 (Opera Painted-Face Silhouette + Flowing Water Sleeves) */
-function drawOperaGhostGuest(
-  ctx: CanvasRenderingContext2D,
-  breath: number,
-  seconds: number,
-  slow: boolean,
-  patterns: ComicPatterns
-) {
-  const sleeveWave = slow ? 0 : Math.sin(seconds * 1.5) * 9;
-  ctx.save();
-  ctx.translate(0, breath * 0.5);
-
-  // Empty antique grandmaster chair silhouette behind ghost (空太师椅)
-  inkRect(ctx, -64, -170, 128, 170, 'rgba(20, 18, 18, 0.72)', 2.4, patterns.woodcutV);
-  inkRect(ctx, -74, -180, 148, 16, '#262321', 2.2);
-
-  // Flowing white silk water sleeves (水袖长摆)
-  inkPoly(
-    ctx,
-    [[-48, -164], [-96 + sleeveWave, -110], [-86 - sleeveWave * 0.5, -26], [-52, -48]],
-    '#ece6d8',
-    2.0
-  );
-  inkPoly(
-    ctx,
-    [[48, -164], [96 - sleeveWave, -110], [86 + sleeveWave * 0.5, -26], [52, -48]],
-    '#ece6d8',
-    2.0
-  );
-
-  // Opera brocade robe
-  inkPoly(ctx, [[-20, -188], [20, -188], [50, -158], [52, 0], [-52, 0], [-50, -158]], '#252729', 2.5, INK, patterns.woodcutV);
-  inkLine(ctx, -20, -184, 24, -40, 2.4, CINNABAR);
-
-  // Stark chalk-white painted opera face & twin pheasant-feather antennae (翎子)
-  inkLine(ctx, -10, -252, -54 + sleeveWave * 0.4, -306, 2.0, INK);
-  inkLine(ctx, 10, -252, 54 - sleeveWave * 0.4, -306, 2.0, INK);
-  ctx.fillStyle = '#f6f1e4';
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.ellipse(0, -220, 23, 30, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  // Cinnabar opera eye-wing markings
-  inkPoly(ctx, [[-18, -228], [-6, -222], [-18, -218]], CINNABAR, 1.2);
-  inkPoly(ctx, [[18, -228], [6, -222], [18, -218]], CINNABAR, 1.2);
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.arc(-10, -222, 2.2, 0, Math.PI * 2);
-  ctx.arc(10, -222, 2.2, 0, Math.PI * 2);
-  ctx.fill();
-  inkLine(ctx, -7, -202, 7, -202, 2.2, CINNABAR);
-
-  drawComicSfx(ctx, '咿呀…', 78, -254, 19, 0.68, 'crimson', 0.1);
-  ctx.restore();
-}

@@ -120,6 +120,16 @@ export function createHudController(): HudController {
       pill.textContent = on ? '开 · M' : '关 · M';
       pill.classList.toggle('off', !on);
     }
+    const volSlider = document.getElementById('audio-volume') as HTMLInputElement | null;
+    const volVal = document.getElementById('audio-volume-val');
+    const pct = Math.round(sfx.volume * 100);
+    if (volSlider) {
+      volSlider.value = String(pct);
+      volSlider.disabled = !on;
+    }
+    if (volVal) {
+      volVal.textContent = on ? `${pct}%` : '静音';
+    }
     byId('audio-icon').innerHTML = on
       ? '<path d="M2.5 6h2.8l3.2-2.6v9.2L5.3 10H2.5V6Z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4"/>'
       : '<path d="M2.5 6h2.8l3.2-2.6v9.2L5.3 10H2.5V6Z"/><path d="M11 6l3.2 4M14.2 6L11 10"/>';
@@ -140,11 +150,13 @@ export function createHudController(): HudController {
       byId('countdown-value').textContent = clock.countdownText;
       byId('countdown-fill').style.width = `${Math.max(0, Math.min(100, clock.progressPct))}%`;
       byId('clock-countdown').classList.toggle('urgent', clock.urgent);
+      document.getElementById('clock-countdown-track')?.classList.toggle('urgent', clock.urgent);
     },
     render(state: GameState, screen: StageView) {
       const nighttime = isNightPhase(state.phase);
       const inSite = state.phase === 'site';
       const meta = DAY_META[state.day] ?? DAY_META[1];
+      const isPeakDay = state.day === 6 || state.day === 10 || state.day === 13;
 
       document.body.classList.toggle('night', nighttime);
       document.body.classList.toggle('in-site', inSite);
@@ -153,8 +165,31 @@ export function createHudController(): HudController {
       byId('scene').classList.toggle('third', state.day === 3 && nighttime);
       document.querySelector('.lamp:last-child')?.classList.toggle('secured', state.steps.includes('lamp') && inSite);
 
-      byId('almanac-yi').textContent =
-        state.phase === 'end' ? '宜 盘账·休业' : nighttime ? meta.yiNight : meta.yiDay;
+      const plaqueEl = document.getElementById('almanac-plaque');
+      if (plaqueEl) {
+        plaqueEl.dataset.peak = isPeakDay ? 'true' : '';
+      }
+      const dayEl = document.getElementById('almanac-day');
+      if (dayEl) {
+        dayEl.textContent = isPeakDay ? `第 ${state.day} 日 · 顶格` : `第 ${state.day} 日`;
+        dayEl.classList.toggle('peak', isPeakDay);
+      }
+      const progEl = document.getElementById('almanac-day-progress');
+      if (progEl) {
+        progEl.textContent = `${state.day}/${state.maxDay}`;
+      }
+
+      const rawYi = state.phase === 'end' ? '宜 盘账·休业' : nighttime ? meta.yiNight : meta.yiDay;
+      const yiEl = byId('almanac-yi');
+      const cleanedYi = rawYi.replace(/^【[^】]+】\s*/, '').trim();
+      const firstChar = cleanedYi.slice(0, 1);
+      if (firstChar === '宜' || firstChar === '忌') {
+        const rest = cleanedYi.slice(1).trim();
+        yiEl.innerHTML = `<b class="${firstChar === '忌' ? 'ji' : 'yi'}">${firstChar}</b><span>${rest}</span>`;
+      } else {
+        yiEl.textContent = cleanedYi;
+      }
+
       byId('scene-name').textContent = meta.title;
       byId('scene-line').textContent =
         state.day === 4 && !nighttime && state.rumor

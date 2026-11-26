@@ -1,4 +1,7 @@
 import type { NightOrderDef } from './types';
+import { NIGHT_TRAP_ORDERS, getScheduledTrapOrder } from './nightTraps';
+
+export { NIGHT_TRAP_ORDERS, getScheduledTrapOrder };
 
 export const DAY_META: Record<
   number,
@@ -51,21 +54,21 @@ export const DAY_META: Record<
     yiDay: '宜 补戏冠·养神',
     yiNight: '忌 直视铜镜',
     dayLine: '昨夜余波未散，戏班送来要修补的纸扎凤冠。',
-    nightLine: '怀抱铜镜的诡影叩响木门，暗处还有冒充熟人亲眷的声音。'
+    nightLine: '怀抱铜镜的诡影叩响木门，门外还有自称戏班掌镜管事的怪客。'
   },
   8: {
     title: '断线裁缝诡',
     yiDay: '宜 扎纸楼·进料',
     yiNight: '忌 递剪刀',
     dayLine: '镇西迁坟大单上门，白天抓紧攒现钱与系统点数。',
-    nightLine: '苍白纸手叩响柜台，门外另有一道自称镇府办事员的黑影。'
+    nightLine: '苍白纸手叩响柜台，门外另有一位抱大铁剪的「柳记学徒」急催出门。'
   },
   9: {
     title: '庙会前夜',
     yiDay: '宜 备大灯·问风声',
     yiNight: '忌 吹熄灯芯',
     dayLine: '全镇张灯结彩筹备大庙会，老人们提醒明晚阴市借路。',
-    nightLine: '无影提灯童蹲在门槛外验灯，暗巷里却传来循环播放的呼救。'
+    nightLine: '无影提灯童蹲在门槛外验灯，街口却传来骨节碰击般的假更梆声。'
   },
   10: {
     title: '百戏游神夜',
@@ -79,21 +82,21 @@ export const DAY_META: Record<
     yiDay: '宜 扫灰·洗把柄',
     yiNight: '忌 散香灰',
     dayLine: '庙会散场，街角残纸随风打旋，宜休整补粮。',
-    nightLine: '收灰炉头诡捧钵上门，荒祠轿夫也在门缝外低声诱骗。'
+    nightLine: '收灰炉头诡捧钵上门，门外还站着一位脚印渗黑血的扫灰老翁。'
   },
   12: {
     title: '渡口湿衣客',
     yiDay: '宜 扎纸船·囤粮',
     yiNight: '忌 问水深',
     dayLine: '江雾压镇，老船工来买压浪纸船，神色有些发虚。',
-    nightLine: '江腥味灌入铺门，一个是门槛讨船，另一个却要拉你下芦苇荡。'
+    nightLine: '江腥味灌入铺门，一个隔台讨纸船，另一个却冒充船工之子连问水深。'
   },
   13: {
     title: '空椅听戏诡',
     yiDay: '宜 净铺·备替纸人',
     yiNight: '【顶格】忌 数屋里人',
     dayLine: '老学究翻出旧档：每次大清算前，屋里都会多出一把空太师椅。',
-    nightLine: '空椅吱呀作响，门外喜婆再次相邀——听清每一句再做决断。'
+    nightLine: '空椅吱呀作响，门外「戏园茶房」竟笑眯眯邀你出门清点台下看客。'
   },
   14: {
     title: '归还旧物夜',
@@ -107,7 +110,7 @@ export const DAY_META: Record<
     yiDay: '宜 立口碑·合阳账',
     yiNight: '【终局】系统大账清算',
     dayLine: '穿越入镇第十五天，全镇街坊联名来订镇口大纸幡。',
-    nightLine: '终审钟响，纸马童与阴差并立灯下，门外却响起最后一道诱杀低语。'
+    nightLine: '终审钟响，纸马童与阴差并立灯下，门外却响起自称「上任老掌柜」的蛊惑低语。'
   }
 };
 
@@ -465,7 +468,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       }
     ],
     intelHintUnverified: '系统预报｜戏班后台的铜镜诡影今夜会寻上门来。',
-    intelHintVerified: '已核实｜铜镜诡只在柜台遮镜交偶；夜里冒充熟人亲眷催你去老槐树送货的皆是陷阱！',
+    intelHintVerified: '已核实｜铜镜诡只在柜台遮镜交偶；自称戏班管事诱你去空戏楼照镜对影的绝对是诱杀！',
     steps: [
       { key: 'rite_main', label: '白纸遮镜交偶' },
       { key: 'done', label: '送客收摊' }
@@ -487,7 +490,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     ptsReward: 28,
     risk: 2,
     turns: 4,
-    guestArt: 'mirror_guest',
+    guestArt: 'tailor_ghost',
     storyBeats: [
       {
         speaker: '断线裁缝诡',
@@ -506,7 +509,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       }
     ],
     intelHintUnverified: '系统预报｜今夜有断线诡登门借线，小心柜台上的铁剪。',
-    intelHintVerified: '已核实｜断线诡在柜台收剪递线即可；叫你熄灯去后巷按手印的假办事员是致命诱杀！',
+    intelHintVerified: '已核实｜断线诡在柜台收剪递线即可；我铺里根本没有小学徒，凡抱铁剪诱你出暗巷量身的必是诱杀！',
     steps: [
       { key: 'rite_main', label: '收剪递朱砂线' },
       { key: 'done', label: '缝毕送行' }
@@ -528,7 +531,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     ptsReward: 30,
     risk: 2,
     turns: 4,
-    guestArt: 'paper_boy',
+    guestArt: 'lantern_child',
     storyBeats: [
       {
         speaker: '无影提灯童',
@@ -547,7 +550,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       }
     ],
     intelHintUnverified: '系统预告｜明晚 D10 庙会将迎第二次顶格夜！今晚先稳住验灯童。',
-    intelHintVerified: '已核实｜真单是在屋里用纸镊换芯；外面拿着黑屏手机催你去后院枯井的必是诱杀！',
+    intelHintVerified: '已核实｜真单是在屋里用纸镊换芯；外面冒充打更人催你吹灯去挂白灯笼的必是诱杀！',
     steps: [
       { key: 'rite_main', label: '镊夹换新灯芯' },
       { key: 'done', label: '验灯画押' }
@@ -619,7 +622,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     ptsReward: 28,
     risk: 2,
     turns: 4,
-    guestArt: 'mirror_guest',
+    guestArt: 'ash_collector',
     storyBeats: [
       {
         speaker: '收灰炉头诡',
@@ -638,7 +641,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       }
     ],
     intelHintUnverified: '系统预报｜庙会散场后的收灰诡较温和，是回血攒粮的好机会。',
-    intelHintVerified: '已核实｜收灰诡只在柜台平分香灰；门外喊你去荒祠抬轿的跑腿小伙是索命陷阱！',
+    intelHintVerified: '已核实｜收灰诡只在柜台平分香灰；叫你捧香炉去镇外乱葬岗倒灰的扫灰老翁是致命陷阱！',
     steps: [
       { key: 'rite_main', label: '净纸平分旧香灰' },
       { key: 'done', label: '盖钵送离' }
@@ -660,7 +663,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     ptsReward: 32,
     risk: 2,
     turns: 4,
-    guestArt: 'umbrella',
+    guestArt: 'ferry_ghost',
     storyBeats: [
       {
         speaker: '渡口湿衣诡',
@@ -679,7 +682,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       }
     ],
     intelHintUnverified: '系统预告｜明晚 D13 为最后一次顶格夜「空椅听戏诡」，今晚记得备齐保命符与口粮。',
-    intelHintVerified: '已核实｜真渡口诡只讨船在铺内交货；拉你去芦苇荡踩水点船的挑夫绝对是骗你下水毙命！',
+    intelHintVerified: '已核实｜真渡口诡只讨船在铺内交货；冒充船工儿子连问水深、拉你下码头试水的必是水诡诱杀！',
     steps: [
       { key: 'rite_main', label: '缄口交付渡河纸船' },
       { key: 'done', label: '送客离铺' }
@@ -722,7 +725,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       }
     ],
     intelHintUnverified: '【终前顶格】仅 3 回合！动用替纸人、安神符与人情卡一鼓作气过关！',
-    intelHintVerified: '已核实｜听戏诡只在屋里要三折戏偶；门外假喜婆诱你出门揭轿帘是必死局！',
+    intelHintVerified: '已核实｜听戏诡只在屋里要三折戏偶；门外假茶房诱你去街心戏台「数清看客」是必死局！',
     steps: [
       { key: 'rite_main', label: '献三折纸戏偶' },
       { key: 'done', label: '鸣锣散戏送客' }
@@ -811,7 +814,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       }
     ],
     intelHintUnverified: '【终局提示】集齐前几日信物、压低阴气并清掉把柄，即可迈向完美真结局！',
-    intelHintVerified: '已核实｜真正的终审在铺内灯下合账；外头自称能提前接你回家的「接引使」是最后一道诱杀诡！',
+    intelHintVerified: '已核实｜真正的终审只在铺内灯下合账；那个自称「上任老掌柜」哄你烧掉总账钻暗道逃跑的，是终局最后一道诱杀诡！',
     steps: [
       { key: 'audit_ledger', label: '呈交十五日总账' },
       { key: 'calm_flame', label: '稳燃三盏长明灯' },
@@ -819,357 +822,6 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     ],
     failNote: '总账未能合拢，系统判定试用期勉强延留。',
     aftermathFlag: 'watched_debt'
-  }
-};
-
-/**
- * 夜间「诡异诱杀陷阱单」（骗你跨出铺门杀掉）
- * 标题与酬金极有迷惑性，唯有听完角色讲述、抓住矛盾与诱骗出门破绽方能识破！
- */
-export const NIGHT_TRAP_ORDERS: Record<string, NightOrderDef> = {
-  trap_d1_niece: {
-    id: 'trap_d1_niece',
-    day: 1,
-    client: '自称「陈婶娘家侄女」的夜客',
-    title: '巷口急单 · 替陈婶送白纸马',
-    boardTitle: '提着红灯的「陈婶侄女」',
-    boardDesc: '门外站着一位披青布衣的妇人，声称陈婶在巷尾崴了脚，愿出双倍现钱请你急送一匹白纸马过去。',
-    siteTitle: '',
-    siteDesc: '',
-    siteIntro: '',
-    taboo: '不可轻信陌生夜客跨出铺门。',
-    pay: 58,
-    ptsReward: 24,
-    risk: 1,
-    turns: 4,
-    guestArt: 'night_auntie',
-    isTrap: true,
-    storyBeats: [
-      {
-        speaker: '「陈婶侄女」',
-        cue: '她把竹篮紧贴胸口，脸色在冷月下泛着纸一样的死白，嘴角一直挂着僵硬弧度。',
-        line: '「掌柜开开门呀！我是陈婶娘家侄女，婶子傍晚回西巷老槐树那边崴了脚，老周家急着要白纸马，叫我跑来请你帮个忙。」'
-      },
-      {
-        speaker: '「陈婶侄女」',
-        cue: '她往门缝里凑近半寸，眼睛一眨不眨，却死活不肯把灯笼照向自己脚下。',
-        line: '「陈婶说了，大晚上劳烦你过意不去，给你双倍现钱 58 块，系统也认这笔急单！东西轻巧，一眨眼就到。」'
-      },
-      {
-        speaker: '「陈婶侄女」',
-        cue: '窗外月色明明干爽无云，她却忽然把声音压得又细又滑，伸手轻轻勾了勾门环。',
-        line: '「铺里灯太晃眼，劳烦掌柜**把门栓卸了、亲自提着纸马跨出门槛跟我走一趟**。外头**暴雨下得这么大**，咱们赶紧上路吧……」'
-      }
-    ],
-    trapClueHint: '【识破破绽】窗外明月干爽无雨，她却说「暴雨下得这么大」，还百般诱你卸闩跨出门槛去老槐树——必是画皮诱杀诡！',
-    trapKillTitle: '老槐树下 · 诱杀毙命',
-    trapKillNarrative: '你刚提着纸马跨出铺门三步，前头引路的「侄女」颈骨咯哒一声生生拧转一百八十度！暗巷浓雾瞬间吞没了身后的红灯笼，次日清晨纸扎铺门前只剩一具空纸马与半只冷鞋。',
-    trapExposeText: '你冷声指出窗外滴雨未下，死死按住门闩绝不迈出半步！门外那张僵笑的脸骤然拉长撕裂，尖啸着化作一团湿冷墨雾散入夜色（识破诱杀：纸火点 +6，阴气 −1）。',
-    intelHintUnverified: '系统提示｜夜里敲门者真假难辨，切记听完对方每一句话再做决定。',
-    intelHintVerified: '已核实｜绝不可被诱骗跨出铺门！注意核对窗外天气与对方说辞是否矛盾。',
-    steps: [],
-    failNote: ''
-  },
-  trap_d2_clerk: {
-    id: 'trap_d2_clerk',
-    day: 2,
-    client: '自称「镇府夜班办事员」',
-    title: '加急合规单 · 补按镇府红印',
-    boardTitle: '穿中山装的「夜班办事员」',
-    boardDesc: '门外立着一名戴圆框眼镜的干部模样来客，称吴支书派他来补办净宅手续，酬金高达 88 现金。',
-    siteTitle: '',
-    siteDesc: '',
-    siteIntro: '',
-    taboo: '不可熄灯离铺。',
-    pay: 88,
-    ptsReward: 32,
-    risk: 1,
-    turns: 4,
-    guestArt: 'masked_wu',
-    isTrap: true,
-    storyBeats: [
-      {
-        speaker: '「夜班办事员」',
-        cue: '来客穿着挺括却沾满冷土的灰制服，鼻梁上的镜片一片死白，呼吸声全无。',
-        line: '「掌柜，吴支书叫我连夜来通知你：白天那张合规净宅合同漏盖了镇府公章，今夜补签完立刻拨 88 块补贴，还免你今后所有抽查。」'
-      },
-      {
-        speaker: '「夜班办事员」',
-        cue: '他把公文包抱得死紧，既不掏合同也不肯在铺里灯光下多站一秒。',
-        line: '「替身纸牌不急着在柜台办。公章锁在后巷旧公所里，离你铺子就拐两个弯，三分钟就能走个来回。」'
-      },
-      {
-        speaker: '「夜班办事员」',
-        cue: '他的脖子怪异地朝左歪了三十度，唇角僵硬地咧开。',
-        line: '「只是镇里避嫌——**掌柜你先把铺里红灯全吹熄，空手跟我去后巷旧公所当面按个血手印**，别磨蹭，快出来吧……」'
-      }
-    ],
-    trapClueHint: '【识破破绽】旧公所早荒废多年，他竟让你熄灭铺灯、空手去后巷按「血手印」——分明是借皮诱杀诡！',
-    trapKillTitle: '后巷荒所 · 诱杀毙命',
-    trapKillNarrative: '你刚吹熄红灯踏入后巷转角，那「办事员」背后的灰制服倏然塌成一张干瘪人皮，无数冰冷纸手从砖墙暗影里伸出将你拖入无光死巷……',
-    trapExposeText: '你当面喝破后巷早已没了公所、更绝不熄灯离铺！那「办事员」的圆框眼镜「啪」地裂成两半，化作一阵黑灰狂风仓皇逃散（识破诱杀：纸火点 +6，阴气 −1）。',
-    intelHintUnverified: '系统提示｜夜里酬金高得反常的急单往往暗藏杀机，务必听完细辨破绽。',
-    intelHintVerified: '已核实｜凡诱导吹灯离铺、去荒僻后巷按印者，皆为诱杀陷阱！',
-    steps: [],
-    failNote: ''
-  },
-  trap_d3_cameraman: {
-    id: 'trap_d3_cameraman',
-    day: 3,
-    client: '自称「阿杰的摄影搭档」',
-    title: '夜拍急单 · 替阿杰送大红灯',
-    boardTitle: '举着黑屏手机的「摄影搭档」',
-    boardDesc: '一名连帽衫青年急切拍门，说阿杰在后院枯井边拍到爆款素材，出高价请你亲送一盏大灯过去。',
-    siteTitle: '',
-    siteDesc: '',
-    siteIntro: '',
-    taboo: '不可随声出后门。',
-    pay: 82,
-    ptsReward: 30,
-    risk: 1,
-    turns: 4,
-    guestArt: 'ajie_night',
-    isTrap: true,
-    storyBeats: [
-      {
-        speaker: '「摄影搭档」',
-        cue: '门外青年把连帽拉得很低，手里高举着一台屏幕漆黑的智能手机。',
-        line: '「掌柜快救急！我是阿杰的搭档，他刚在铺子后院枯井旁边拍大夜戏，三脚架卡住了，灯也灭了，急需你拎盏红灯去打光！」'
-      },
-      {
-        speaker: '「摄影搭档」',
-        cue: '他语速快得像背稿，双脚死死钉在阴暗檐角，怎么也不肯露正脸。',
-        line: '「只要你亲自拎灯去井边照两分钟，赞助商直接结你 82 块现钱，系统也算你成单，比应付屋里那破纸人划算多了！」'
-      },
-      {
-        speaker: '「摄影搭档」',
-        cue: '漆黑的手机听筒忽然响起毫无起伏、不断循环的阿杰原声，与他咧开的嘴型完全对不上。',
-        line: '「『**别管屋里那盏灯了，快出来吧、快出来吧、快出来吧……**』听见没？阿杰在井边喊你呢，**跨出后门三步就到**！」'
-      }
-    ],
-    trapClueHint: '【识破破绽】手机黑屏却循环复读同一句「快出来吧」，还哄你丢下屋里纸人去后院枯井——纯粹是录声诱杀诡！',
-    trapKillTitle: '后院枯井 · 诱杀毙命',
-    trapKillNarrative: '你刚拎灯迈出后门三步，手机里的复读声戛然而止。湿冷的井口不知何时挪到了脚边，一只惨白纸手猛地攥住你的脚踝将你扯进漆黑深井……',
-    trapExposeText: '你冷笑戳穿他手里不过是一台死机录音的空壳，当场落死门栓！黑屏手机发出一声刺耳电流爆鸣，门外连帽身影瞬间塌成一滩黑墨（识破诱杀：纸火点 +6，阴气 −1）。',
-    intelHintUnverified: '系统提示｜真诡客守规矩在铺内了结，诱杀诡最爱借熟人名义催你出门。',
-    intelHintVerified: '已核实｜听到循环失真语音与「去后院枯井」的催促，立刻识破拒接！',
-    steps: [],
-    failNote: ''
-  },
-  trap_d4_ferryman: {
-    id: 'trap_d4_ferryman',
-    day: 4,
-    client: '浑身滴水的「渡口挑夫」',
-    title: '渡口重金单 · 江边亲烧引路船',
-    boardTitle: '留着反向湿脚印的「渡口挑夫」',
-    boardDesc: '一名披蓑衣、浑身滴水的汉子拍门，称江口翻船急求你带纸船随他去水边亲手焚化，重金 90 现金。',
-    siteTitle: '',
-    siteDesc: '',
-    siteIntro: '',
-    taboo: '不可随客赴江边浅水。',
-    pay: 90,
-    ptsReward: 34,
-    risk: 2,
-    turns: 4,
-    guestArt: 'umbrella',
-    isTrap: true,
-    storyBeats: [
-      {
-        speaker: '「渡口挑夫」',
-        cue: '湿透的蓑衣往下淌着腥臭江水，门外石板上竟留着一串**鞋尖朝外而非朝里**的诡异湿脚印。',
-        line: '「掌柜行行好！渡口那边刚翻了乌篷船，主家急得要命，托我重金请你扎一只引路纸船，90 块现钱马上结清！」'
-      },
-      {
-        speaker: '「渡口挑夫」',
-        cue: '几根发黑发烂的水草顺着他衣领滑出来，他却浑然不觉。',
-        line: '「老船工都说你手艺灵，我认得路，半炷香工夫就能带你走个来回，绝不耽误你天亮开铺。」'
-      },
-      {
-        speaker: '「渡口挑夫」',
-        cue: '他伸出泡得浮肿惨白的手掌，声音里透出藏不住的渴求。',
-        line: '「只是这船在铺门口烧不认主——**掌柜你必须随我走到江边芦苇荡，光脚踩进浅水里亲自点着**，水里头有人等着接你呢……」'
-      }
-    ],
-    trapClueHint: '【识破破绽】鞋印朝外、衣领挂腐水草，还让你光脚踩进夜江浅水——分明是拉替死鬼的水诡诱杀！',
-    trapKillTitle: '芦苇浅滩 · 诱杀毙命',
-    trapKillNarrative: '你刚踏进冰冷江水半寸，水面下瞬间涌出十数只浮肿苍白的手死死拽住双腿！回望岸上，那「挑夫」正站在雾里朝你缓缓鞠躬，江雾彻底合拢……',
-    trapExposeText: '你点破他衣领里的腐草与反向脚印，严词拒绝踏出铺门半步！门外「挑夫」发出一声咕噜水泡般的怨嚎，整个人化作一滩腥冷江水退入暗巷（识破诱杀：纸火点 +6，阴气 −1）。',
-    intelHintUnverified: '系统提示｜留心来客的细节动作与「请你亲赴某地」的诡异要求。',
-    intelHintVerified: '已核实｜任何叫你去江边芦苇荡亲烧纸船的夜客，必是索命水诡！',
-    steps: [],
-    failNote: ''
-  },
-  trap_d5_messenger: {
-    id: 'trap_d5_messenger',
-    day: 5,
-    client: '自称「邻铺跑腿小伙」',
-    title: '同行救急单 · 荒祠代抬纸轿',
-    boardTitle: '颊沾胭脂的「邻铺小伙」',
-    boardDesc: '门外站着一名自称隔壁红白铺伙计的少年，称邻铺失火急缺人手，愿出 105 现钱请你去荒祠搭手抬纸轿。',
-    siteTitle: '',
-    siteDesc: '',
-    siteIntro: '',
-    taboo: '不可赴荒祠充数抬轿。',
-    pay: 105,
-    ptsReward: 40,
-    risk: 2,
-    turns: 4,
-    guestArt: 'paper_boy',
-    isTrap: true,
-    storyBeats: [
-      {
-        speaker: '「邻铺小伙」',
-        cue: '他穿着不合身的旧褂子，冷白的脸颊粉尘底下隐约透出两点工笔朱砂圆腮红。',
-        line: '「掌柜快搭把手！隔壁红白铺后院走水了，我们东家急着交一顶大纸轿，愿出 105 块现钱加两份口粮请你帮忙！」'
-      },
-      {
-        speaker: '「邻铺小伙」',
-        cue: '你抬眼往窗外望去，隔壁屋檐安静漆黑，哪有半分火光烟气。',
-        line: '「东家已经在镇北荒祠等着了，纸轿早扎得差不多，就差一位懂行的掌柜去搭把手。」'
-      },
-      {
-        speaker: '「邻铺小伙」',
-        cue: '他忽然咧开一个僵硬的纸人笑，嗓音尖细如竹片摩擦。',
-        line: '「**不用带纸料，把你自己带去就行。**荒祠轿夫刚巧少了一个活人抬前杠，**你迈出门槛我就引路……**」'
-      }
-    ],
-    trapClueHint: '【识破破绽】隔壁根本没起火，他脸上还透着纸人圆腮红，竟说「不用带纸料，把你自己带去充活人轿夫」——必死诱杀！',
-    trapKillTitle: '镇北荒祠 · 诱杀毙命',
-    trapKillNarrative: '刚随他迈入荒祠门槛，红纸轿帘无风自掀，三具惨白纸轿夫齐齐扭头盯住你。冰冷的竹杠沉重压上肩头，你的皮肤瞬间褪成宣纸般僵白……',
-    trapExposeText: '你戳穿隔壁根本无火、更不缺活人抬杠，反手拍稳门板！那「小伙」的笑脸「嘶啦」裂成纸片，打着旋儿被阴风吹得无影无踪（识破诱杀：纸火点 +6，阴气 −1）。',
-    intelHintUnverified: '系统提示｜天上不会掉 105 现钱的便宜急单，听完原委再决定接不接。',
-    intelHintVerified: '已核实｜谎称邻铺失火、诱你去镇北荒祠抬轿者必是假纸童诱杀！',
-    steps: [],
-    failNote: ''
-  },
-  trap_d6_matchmaker: {
-    id: 'trap_d6_matchmaker',
-    day: 6,
-    client: '戴朱砂花的「夜迎喜婆」',
-    title: '重金喜单 · 巷口替轿点喜烛',
-    boardTitle: '脚不沾地的「迎亲喜婆」',
-    boardDesc: '一名鬓插朱砂绒花的喜婆笑盈盈立在门外，称迎亲花轿停在巷口熄了烛，愿出 145 现钱请你出门点烛。',
-    siteTitle: '',
-    siteDesc: '',
-    siteIntro: '',
-    taboo: '不可出门迎轿揭帘。',
-    pay: 145,
-    ptsReward: 54,
-    risk: 2,
-    turns: 3,
-    guestArt: 'paper_bride',
-    isTrap: true,
-    storyBeats: [
-      {
-        speaker: '「迎亲喜婆」',
-        cue: '她一身暗红袄裙，嘴里说着吉利话，绣花鞋跟却始终悬在青石台阶半寸之上。',
-        line: '「哎哟大喜大喜！北巷十里红妆的喜轿刚停在路口，轿门上的龙凤喜烛叫阴风吹灭了，特请手艺最好的掌柜去续个火！」'
-      },
-      {
-        speaker: '「迎亲喜婆」',
-        cue: '她扬起一只沉甸甸的朱砂红包，声音里夹着空洞的木头敲击回响。',
-        line: '「只需走出去十步远，给轿子点上烛便给 145 块大红包，顺带免了今夜顶格凶煞，多省事呀！」'
-      },
-      {
-        speaker: '「迎亲喜婆」',
-        cue: '她的声音骤然叠成两个尖利重叠的女声，袖中伸出一截干枯红绳。',
-        line: '「**红盖头就在巷口等你呢，掌柜把门彻底敞开，一步步走过来亲自揭轿帘、拜天地吧……**」'
-      }
-    ],
-    trapClueHint: '【识破破绽】鞋跟悬空、双声重叠，还诱你敞门走出去亲自「揭轿帘拜天地」——这是抢新郎的必死诱杀诡！',
-    trapKillTitle: '无声花轿 · 诱杀毙命',
-    trapKillNarrative: '你刚迈出铺门十步，四面八方骤然响起震耳欲聋的无声唢呐，血红轿帘猛地将你裹入其中！天亮时北巷空无一物，铺里只剩一张写着你生辰的合卺婚书。',
-    trapExposeText: '你厉声喝退门外邪祟，死守门内绝不踏出半步！喜婆的笑声骤然化作凄厉唢呐哀鸣，连同门外红雾一齐消散（识破诱杀：纸火点 +6，阴气 −1）。',
-    intelHintUnverified: '系统提示｜顶格之夜凶险加倍，千万别被高赏金的「省事捷径」骗出门！',
-    intelHintVerified: '已核实｜正主只在铺内履约，凡诱你敞门走十步去揭轿帘的皆为致命诱杀！',
-    steps: [],
-    failNote: ''
-  },
-  trap_d10_drummer: {
-    id: 'trap_d10_drummer',
-    day: 10,
-    client: '自称「庙会催场锣手」',
-    title: '庙会急修单 · 城隍庙后台修龙头',
-    boardTitle: '提着无声铜锣的「催场锣手」',
-    boardDesc: '一名戴古戏面的高大锣手急拍铺门，称庙会龙头断须，愿出 160 重金请你立刻随他去庙后抢修。',
-    siteTitle: '',
-    siteDesc: '',
-    siteIntro: '',
-    taboo: '不可熄灯钻暗巷。',
-    pay: 160,
-    ptsReward: 62,
-    risk: 2,
-    turns: 3,
-    guestArt: 'temple_deity',
-    isTrap: true,
-    storyBeats: [
-      {
-        speaker: '「催场锣手」',
-        cue: '他手里铜锣狠狠一敲，却诡异地没发出半点金属鸣响，只扬起一阵冰冷纸灰。',
-        line: '「掌柜快跟我走！城隍庙后台那只游神龙头刚崩了龙须，会首急得团团转，开价 160 现金请你马上过去补两笔！」'
-      },
-      {
-        speaker: '「催场锣手」',
-        cue: '你瞥向窗棂——外头长街黑漆漆死寂一片，半个活人灯火也没有。',
-        line: '「外头活人戏台亮堂着呢、热闹得很！补完龙头还能顺带免了今夜阴市借路，全镇都念你的好！」'
-      },
-      {
-        speaker: '「催场锣手」',
-        cue: '古纸面下的眼孔渗出两点漆黑墨汁，他死死扣住门框。',
-        line: '「**快把铺里三盏红灯全吹灭，跟我钻进庙后暗巷**，大伙儿都在黑处等你一个人呢……」'
-      }
-    ],
-    trapClueHint: '【识破破绽】敲锣无声、长街死寂他却谎称热闹，还催你吹灭三盏红灯钻庙后暗巷——绝非活人，乃庙会诱杀诡！',
-    trapKillTitle: '庙后暗巷 · 诱杀毙命',
-    trapKillNarrative: '你刚吹灭铺灯随他拐进庙后无光窄巷，四面高墙瞬间挂满密密麻麻的无眼纸面具。鼓点轰鸣中，你的影子被生生钉死在青砖墙上……',
-    trapExposeText: '你冷眼识破他敲锣无声、长街空无活人，死护铺里红灯绝不迈步！那假锣手发出尖锐纸裂声，顷刻化作满地碎彩纸（识破诱杀：纸火点 +6，阴气 −1）。',
-    intelHintUnverified: '系统提示｜庙会之夜阴市混杂，听清对方言辞与窗外实景是否相悖！',
-    intelHintVerified: '已核实｜庙会夜切忌吹灯离铺！凡谎称外头热闹催你钻暗巷者必为诱杀！',
-    steps: [],
-    failNote: ''
-  },
-  trap_d14_system_mimic: {
-    id: 'trap_d14_system_mimic',
-    day: 14,
-    client: '自称「系统提前接引使」',
-    title: '【特批捷径】免终审提前离镇单',
-    boardTitle: '手持空白红笺的「接引使」',
-    boardDesc: '一名长衫老者手持仿若系统界面的朱砂红笺立于门外，声称你的生存指标已提前达标，今夜即可领赏回家。',
-    siteTitle: '',
-    siteDesc: '',
-    siteIntro: '',
-    taboo: '不可轻信伪造系统捷径走出镇口。',
-    pay: 200,
-    ptsReward: 99,
-    risk: 1,
-    turns: 4,
-    guestArt: 'old_accountant',
-    isTrap: true,
-    storyBeats: [
-      {
-        speaker: '「系统接引使」',
-        cue: '他托着一张画着歪斜朱砂框的红纸笺，纸面隐隐散出一股潮湿墓土腥气。',
-        line: '「恭喜穿越者！后台复核完毕，你的纸火经营指标已经超额达标，特批免去十五日终审，额外补发 200 现金与 99 纸火点！」'
-      },
-      {
-        speaker: '「系统接引使」',
-        cue: '他圆框眼镜片里漆黑一片，竟完全映不出你屋里三盏红灯的火光。',
-        line: '「离开诡异小镇的通道已经在镇口牌坊白雾里提前打开了，再磨蹭到天亮可就关门了。」'
-      },
-      {
-        speaker: '「系统接引使」',
-        cue: '那张红纸笺在他指尖悄然褪成一张空白黄表纸，他压低声音连声催促。',
-        line: '「**别管那本破账了，现在就扔下门闩、空手走出镇口白雾**，跨过去一步就能回到原来的世界……」'
-      }
-    ],
-    trapClueHint: '【识破破绽】镜片不映灯火、红笺散发墓土味且褪成空白黄表纸，还诱你扔下账本走入镇口白雾——冒充系统的终极诱杀诡！',
-    trapKillTitle: '镇口浓雾 · 诱杀毙命',
-    trapKillNarrative: '你扔下账本一步踏入镇口白雾，身后的纸火铺红灯瞬间彻底熄灭。白雾里哪有什么归途，只有无数双苍白纸手悄无声息合拢上来，把你留成了下一任纸人……',
-    trapExposeText: '你一眼看穿他手里褪色的空白黄表纸，冷声关门守住灯火！假接引使发出不甘的尖笑，身影如墨水般迅速洇散在月色里（识破诱杀：纸火点 +6，阴气 −1）。',
-    intelHintUnverified: '系统提示｜真正的终审只会在铺内灯下清算，切莫轻信天降捷径！',
-    intelHintVerified: '已核实｜凡冒充系统诱你走出镇口白雾的，都是专挑终局前下手的致命伪装诡！',
-    steps: [],
-    failNote: ''
   }
 };
 
@@ -1199,17 +851,6 @@ export function getScheduledNightOrder(day: number, h: number): NightOrderDef {
   if (day === 13) return NIGHT_ORDERS.n13_peak_empty_chair;
   if (day === 14) return NIGHT_ORDERS.n14_quiet_borrower;
   return NIGHT_ORDERS.n15_final_ledger;
-}
-
-export function getScheduledTrapOrder(day: number): NightOrderDef {
-  if (day === 1 || day === 7) return NIGHT_TRAP_ORDERS.trap_d1_niece;
-  if (day === 2 || day === 8) return NIGHT_TRAP_ORDERS.trap_d2_clerk;
-  if (day === 3 || day === 9) return NIGHT_TRAP_ORDERS.trap_d3_cameraman;
-  if (day === 4 || day === 12) return NIGHT_TRAP_ORDERS.trap_d4_ferryman;
-  if (day === 5 || day === 11) return NIGHT_TRAP_ORDERS.trap_d5_messenger;
-  if (day === 6 || day === 13) return NIGHT_TRAP_ORDERS.trap_d6_matchmaker;
-  if (day === 10) return NIGHT_TRAP_ORDERS.trap_d10_drummer;
-  return NIGHT_TRAP_ORDERS.trap_d14_system_mimic;
 }
 
 /**

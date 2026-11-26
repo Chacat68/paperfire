@@ -1,4 +1,4 @@
-import type { ActionOption, CardIconKind, DayTab, GameState, StageView } from '../data/types';
+import type { ActionOption, CardIconKind, GameState, StageView } from '../data/types';
 import { isNightPhase } from '../engine';
 
 const CARD_ICONS: Record<CardIconKind, string> = {
@@ -21,7 +21,10 @@ const CARD_ICONS: Record<CardIconKind, string> = {
   broom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M15 4 9 13M6 12l6 4-3 5-6-3 3-6Z"/><path d="M17 16c0-1.5 1-2.5 0-4M20 15c0-1.5 1-2.5 0-4"/></svg>',
   helper: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>',
   wash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 5h14v14H5Z"/><path d="M8 16 16 8M8 8l8 8"/></svg>',
-  rest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M18 14.5A6.5 6.5 0 0 1 9.5 6a6.5 6.5 0 1 0 8.5 8.5Z"/></svg>'
+  rest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M18 14.5A6.5 6.5 0 0 1 9.5 6a6.5 6.5 0 1 0 8.5 8.5Z"/></svg>',
+  teahouse: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4Z"/><path d="M16 12h2a2.5 2.5 0 0 1 0 5h-2M8 7c0-1.5 1-2 1-3M12 7c0-1.5 1-2 1-3"/></svg>',
+  bookstore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 5h6.5a2.5 2.5 0 0 1 2.5 2.5V20a2 2 0 0 0-2-2H4V5Z"/><path d="M20 5h-6.5A2.5 2.5 0 0 0 11 7.5V20a2 2 0 0 1 2-2h7V5Z"/></svg>',
+  shrine: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 9 12 4l9 5H3Z"/><path d="M6 9v10M18 9v10M10 19v-5h4v5M4 19h16"/></svg>'
 };
 
 const CONTROL_ICONS: Record<string, string> = {
@@ -29,47 +32,14 @@ const CONTROL_ICONS: Record<string, string> = {
   skip: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 9h12M6 4v10M12 4v10"/></svg>',
   dawn: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 13h12M9 4v2.2M5 6.5l1.5 1.5M13 6.5 11.5 8"/><path d="M5.5 13a3.5 3.5 0 0 1 7 0"/></svg>',
   open_system: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 2.4 14.8 5.6v6.8L9 15.6l-5.8-3.2V5.6L9 2.4Z"/><path d="M9 5.8v6.4M6 7.5 9 9.2l3-1.7"/></svg>',
-  open_street: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 15h12M4.5 15V6.5L9 3.5l4.5 3V15"/><path d="M7.5 15v-4.5h3V15"/></svg>',
+  street_go_back: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4.5 9h9M9.5 5l4 4-4 4"/></svg>',
+  street_go_front: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M13.5 9h-9M8.5 5l-4 4 4 4"/></svg>',
   return_to_shop: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M11.5 4.5 7 9l4.5 4.5"/><path d="M7 9h7.5"/></svg>',
   back_to_orders: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M11.5 4.5 7 9l4.5 4.5"/></svg>',
   back_to_night_board: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M11.5 4.5 7 9l4.5 4.5"/></svg>',
   replay_dialogue: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4.5 9a4.5 4.5 0 1 1 1.3 3.2"/><path d="M4.5 5.5v3.5H8"/></svg>',
   replay_night_dialogue: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4.5 9a4.5 4.5 0 1 1 1.3 3.2"/><path d="M4.5 5.5v3.5H8"/></svg>'
 };
-
-function makeStreetExitButton(state: GameState): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'move ctrl-btn street-out-btn';
-  button.dataset.openStreet = 'true';
-  button.setAttribute('aria-keyshortcuts', 'G');
-
-  const kbd = document.createElement('kbd');
-  kbd.textContent = 'G';
-  kbd.setAttribute('aria-hidden', 'true');
-
-  const wrap = document.createElement('span');
-  wrap.className = 'ctrl-title-row';
-  wrap.innerHTML = CONTROL_ICONS.open_street;
-  const title = document.createElement('strong');
-  title.textContent = '外出街巷';
-  wrap.append(title);
-
-  const detail = document.createElement('small');
-  detail.textContent =
-    state.day === 3 && !state.informedDays.includes(3)
-      ? '去裁缝铺问第三盏灯忌'
-      : '镇集进货 · 问忌 · 折符';
-
-  button.append(kbd, wrap, detail);
-  if (state.day === 3 && !state.informedDays.includes(3)) {
-    const dot = document.createElement('i');
-    dot.className = 'badge-dot';
-    dot.setAttribute('aria-hidden', 'true');
-    button.append(dot);
-  }
-  return button;
-}
 
 function makeSystemExchangeButton(state: GameState): HTMLButtonElement {
   const button = document.createElement('button');
@@ -86,14 +56,14 @@ function makeSystemExchangeButton(state: GameState): HTMLButtonElement {
   wrap.className = 'ctrl-title-row';
   wrap.innerHTML = CONTROL_ICONS.open_system;
   const title = document.createElement('strong');
-  title.textContent = '系统兑换';
+  title.textContent = '纸火系统';
   wrap.append(title);
 
   const detail = document.createElement('small');
   detail.textContent =
     state.ration === 0
       ? `口粮告急 · 点 ${state.pts}`
-      : `纸火点 ${state.pts} · 口粮 ${state.ration}`;
+      : `兑换·技能·情报 · 点 ${state.pts}`;
 
   const dot = document.createElement('i');
   dot.id = 'system-dot';
@@ -128,6 +98,7 @@ export function makeActionButton(
   button.className = [
     'move',
     move.primary ? 'main' : '',
+    move.skill ? 'skill-move' : '',
     move.danger ? 'danger' : '',
     move.presentation === 'control' ? 'ctrl-btn' : ''
   ]
@@ -253,7 +224,6 @@ export function renderStage(
   state: GameState,
   screen: StageView,
   isSceneInteractive: boolean,
-  onSelectTab: (tab: DayTab) => void,
   onHighlight: (actionId: string, active: boolean) => void
 ): Map<string, ActionOption> {
   const nighttime = isNightPhase(state.phase);
@@ -283,33 +253,37 @@ export function renderStage(
                 ? '阴'
                 : '阳';
 
-  // 铺务整理已移至每日结束收尾阶段触发，白天柜台无需任何冗余页签！
-  const dayTabsHtml = '';
-
   const hasDialogue = Boolean(screen.dialogue);
   const compactMode = hasCards || state.phase === 'day' || state.phase === 'board' || state.phase === 'settle';
   const showCounterSystemBtn =
     (!hasDialogue || inStreet) && (state.phase === 'day' || state.phase === 'board' || state.phase === 'settle');
-  const showStreetExitBtn = state.phase === 'day' && !inStreet && !hasDialogue;
 
   if (compactMode) {
+    const isTrapAlertNotice = Boolean(
+      screen.notice &&
+        (screen.notice.includes('系统侦测警示') ||
+          screen.notice.includes('听声辨影') ||
+          screen.notice.includes('识破破绽'))
+    );
     const tipText = !inSite
       ? screen.dialogue && !inStreet
         ? screen.dialogue.finished
-          ? screen.dialogue.summaryNote ?? screen.notice ?? ''
+          ? isTrapAlertNotice
+            ? screen.notice!
+            : screen.dialogue.summaryNote ?? screen.notice ?? ''
           : `${screen.dialogue.speaker}讲述中（${screen.dialogue.step}/${screen.dialogue.total}），点气泡或按 1 继续`
         : screen.notice ?? ''
       : '';
-    const hasControlCol = controlMoves.length > 0 || showCounterSystemBtn || showStreetExitBtn;
+    const hasControlCol = controlMoves.length > 0 || showCounterSystemBtn;
 
     stageEl.innerHTML = `<div class="deck-shell">
       <div class="deck-bar">
         <div class="deck-bar-left">
           <span class="phase-stamp${inSite ? ' site' : inStreet ? ' street' : ''}" aria-hidden="true">${stampChar}</span>
           <h2 id="stage-title" tabindex="-1"></h2>
-          <p id="stage-description" class="deck-tip"></p>
+          <p id="stage-description" class="deck-tip${isTrapAlertNotice && screen.dialogue?.finished ? ' alert-tip' : ''}"></p>
         </div>
-        <div class="deck-bar-right">${dayTabsHtml}</div>
+        <div class="deck-bar-right"></div>
       </div>
       <div class="deck-main${hasControlCol ? ' with-controls' : ''}" id="actions">
         ${hasCards ? '<div class="card-hand" id="card-hand"></div>' : '<div class="actions" id="normal-actions"></div>'}
@@ -345,9 +319,6 @@ export function renderStage(
     const ctrlEl = stageEl.querySelector<HTMLElement>('#deck-controls');
     if (ctrlEl) {
       const ctrlNodes: HTMLElement[] = [];
-      if (showStreetExitBtn) {
-        ctrlNodes.push(makeStreetExitButton(state));
-      }
       if (showCounterSystemBtn) {
         ctrlNodes.push(makeSystemExchangeButton(state));
       }
@@ -357,8 +328,7 @@ export function renderStage(
       ctrlEl.replaceChildren(...ctrlNodes);
     }
   } else {
-    // 履约现场 / 结算 / 结局 / 坏结局：保持左右剧场分栏，结算时也在操作区附带系统兑换入口
-    const addSettleSysBtn = state.phase === 'settle';
+    // 履约现场 / 结局 / 坏结局：保持左右剧场分栏
     stageEl.innerHTML = `<div class="stage-grid">
       <div class="story">
         <div class="nameplate">
@@ -370,7 +340,7 @@ export function renderStage(
         <p id="feedback" class="feedback" role="status" tabindex="-1"></p>
       </div>
       <div class="commands">
-        <div class="actions${available.length === 1 && !addSettleSysBtn ? ' single-col' : ''}" id="actions"></div>
+        <div class="actions${available.length === 1 ? ' single-col' : ''}" id="actions"></div>
         ${locked.length ? `<details class="locked-moves"><summary>暂不可用的动作（${locked.length}）</summary><div class="actions" id="locked-actions"></div></details>` : ''}
       </div>
     </div>`;
@@ -379,8 +349,8 @@ export function renderStage(
     const descEl = stageEl.querySelector<HTMLElement>('#stage-description')!;
     const fbEl = stageEl.querySelector<HTMLElement>('#feedback')!;
     titleEl.textContent = screen.title;
-    descEl.textContent = state.phase === 'settle' ? state.lastSettleSummary || state.message : screen.description;
-    if (state.phase !== 'settle' && state.phase !== 'end') {
+    descEl.textContent = screen.description;
+    if (state.phase !== 'end') {
       fbEl.textContent = state.message;
     }
 
@@ -389,9 +359,6 @@ export function renderStage(
     const actionNodes: HTMLElement[] = available.map((move) =>
       makeActionButton(move, move.reason ? '' : String(++shortcut), onHighlight)
     );
-    if (addSettleSysBtn) {
-      actionNodes.push(makeSystemExchangeButton(state));
-    }
     actionsEl.replaceChildren(...actionNodes);
 
     const lockedEl = stageEl.querySelector<HTMLElement>('#locked-actions');
@@ -399,13 +366,6 @@ export function renderStage(
       lockedEl.replaceChildren(...locked.map((move) => makeActionButton(move, '', onHighlight)));
     }
   }
-
-  stageEl.querySelectorAll<HTMLButtonElement>('[data-day-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.dayTab as DayTab;
-      if (tab && tab !== state.dayTab) onSelectTab(tab);
-    });
-  });
 
   return new Map(screen.moves.map((m) => [m.id, m]));
 }
