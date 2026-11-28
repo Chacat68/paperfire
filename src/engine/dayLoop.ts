@@ -4,7 +4,7 @@ import { ORDER_BY_ID } from '../data/orders';
 import { ALLEY_FINDS, STREET_SUPPLIES, TEAHOUSE_GOSSIPS } from '../data/street';
 import { TOWN_INTEL_DOCS } from '../data/systemShop';
 import type { ActionOption, CardIconKind, CraftMode, DayOrderDef, GameState } from '../data/types';
-import { NIGHT_DURATION_SEC, hasSkill, markCharacterMet, note, recordVisit } from './state';
+import { NIGHT_DURATION_SEC, hasSkill, hasToken, markCharacterMet, note, recordVisit } from './state';
 import { syncAndClaimDailyQuests, syncCodexMilestones } from './systemEngine';
 
 function pickDayOrderIcon(order: DayOrderDef): CardIconKind {
@@ -31,6 +31,7 @@ export function fulfillDayOrder(state: GameState, order: DayOrderDef, mode: Craf
   const hasNimble = hasSkill(state, 'craft_nimble');
   const hasTrim = hasSkill(state, 'craft_trim');
   const hasMaster = hasSkill(state, 'craft_master');
+  const hasRedZhong = hasToken(state, 'red_zhong_die');
   const baseAp = hasMaster ? Math.max(1, order.apCost - 1) : order.apCost;
   let apCost = baseAp;
   let needS = order.needS;
@@ -42,6 +43,12 @@ export function fulfillDayOrder(state: GameState, order: DayOrderDef, mode: Craf
 
   if (state.audit && !order.dayToNight && !order.reliefOnly) {
     pay = Math.max(8, Math.round(pay * 0.78));
+  }
+
+  let zhongNote = '';
+  if (hasRedZhong && !order.dayToNight && (mode === 'standard' || mode === 'fine')) {
+    pay += 4;
+    zhongNote = '（红中老千骰 +4 现）';
   }
 
   if (mode === 'rush') {
@@ -121,9 +128,9 @@ export function fulfillDayOrder(state: GameState, order: DayOrderDef, mode: Craf
             : 'completed_standard',
     cashDelta: pay,
     ptsDelta: ptsBonus,
-    note: `${modeLabel}交付${trimNote}${order.dayToNight ? '（已约今夜）' : ''}`
+    note: `${modeLabel}交付${trimNote}${zhongNote}${order.dayToNight ? '（已约今夜）' : ''}`
   });
-  note(state, `以「${modeLabel}」满足活人订单「${order.title}」，收 ${pay} 现金、+${ptsBonus} 纸火点${trimNote}${extra}`);
+  note(state, `以「${modeLabel}」满足活人订单「${order.title}」，收 ${pay} 现金、+${ptsBonus} 纸火点${trimNote}${zhongNote}${extra}`);
   syncAndClaimDailyQuests(state);
 }
 
@@ -197,12 +204,14 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
 
       const hasNimble = hasSkill(state, 'craft_nimble');
       const hasMaster = hasSkill(state, 'craft_master');
+      const hasRedZhong = hasToken(state, 'red_zhong_die');
       const baseAp = hasMaster ? Math.max(1, order.apCost - 1) : order.apCost;
       const basePay = order.dayToNight
         ? order.dayToNight.deposit
         : state.audit && !order.reliefOnly
           ? Math.max(8, Math.round(order.payBase * 0.78))
           : order.payBase;
+      const zhongExtra = hasRedZhong && !order.dayToNight ? 4 : 0;
       const rushAp = Math.max(1, baseAp - 1);
       const fineNeedS = hasNimble ? order.needS : order.needS + 1;
       const canRush = baseAp > 1 && !order.reliefOnly;
@@ -214,7 +223,7 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
         {
           id: `craft_std_${order.id}`,
           title: order.dayToNight ? '接单 · 收订金' : hasMaster ? '普通工艺 · 鬼斧省时' : '普通工艺',
-          detail: `工时−${baseAp}${order.needS ? ` · 料−${order.needS}` : ' · 自带料'} · 现+${basePay} · 点+${basePts}`,
+          detail: `工时−${baseAp}${order.needS ? ` · 料−${order.needS}` : ' · 自带料'} · 现+${basePay + zhongExtra}${zhongExtra ? '(老千骰)' : ''} · 点+${basePts}`,
           primary: true,
           reason:
             costReason(state, baseAp, order.needS) ||
@@ -237,7 +246,7 @@ export function buildDayOrderMoves(state: GameState): ActionOption[] {
         moves.push({
           id: `craft_fine_${order.id}`,
           title: hasNimble ? '精工加净 · 熟手免加料' : '精工加净',
-          detail: `工时−${baseAp} · 料−${fineNeedS} · 洁净+1 · 现+${basePay + 4} · 点+${basePts + 2}`,
+          detail: `工时−${baseAp} · 料−${fineNeedS} · 洁净+1 · 现+${basePay + 4 + zhongExtra} · 点+${basePts + 2}`,
           reason: costReason(state, baseAp, fineNeedS),
           run: () => fulfillDayOrder(state, order, 'fine')
         });
@@ -429,7 +438,7 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
         state.c += 1;
         state.bookstoreVisitsTotal = (state.bookstoreVisitsTotal ?? 0) + 1;
         markVisited('bookstore');
-        markCharacterMet(state, 'elder_scholar');
+        markCharacterMet(state, 'old_scholar');
 
         const remainingDocs = TOWN_INTEL_DOCS.filter((d) => !(state.unlockedIntelIds ?? []).includes(d.id));
         if (remainingDocs.length > 0 && state.bookstoreVisitsTotal % 2 === 0) {
@@ -450,13 +459,14 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
       }
     });
 
-    // 3. 城隍香火堂：敬香祈福，强效降阴气 + 洁净，且安抚伙计胆量
+    // 3. 城隍香火堂：敬香祈福，强效降阴气 + 洁净（三号病房通行牌额外 +1 洁净），且安抚伙计胆量
+    const shrineCleanGain = hasToken(state, 'ward_badge') ? 2 : 1;
     moves.push({
       id: 'explore_shrine',
       title: '城隍堂敬三炷清香',
       detail: state.helper.hired
-        ? '工时 −1 · 现金 −10 · 阴气 −3 · 洁净 +1 · 小栓胆量 +2'
-        : '工时 −1 · 现金 −10 · 阴气 −3 · 洁净 +1',
+        ? `工时 −1 · 现金 −10 · 阴气 −3 · 洁净 +${shrineCleanGain} · 小栓胆量 +2`
+        : `工时 −1 · 现金 −10 · 阴气 −3 · 洁净 +${shrineCleanGain}`,
       presentation: 'card',
       card: {
         kind: 'street_spot',
@@ -467,7 +477,7 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
           { label: '工时', value: '−1', tone: 'cost' },
           { label: '现金', value: '−10', tone: 'cost' },
           { label: '阴气', value: '−3', tone: 'pts' },
-          { label: '洁净', value: '+1', tone: 'gain' }
+          { label: '洁净', value: `+${shrineCleanGain}`, tone: 'gain' }
         ],
         statusStamp: didShrine ? '已上香' : undefined
       },
@@ -476,7 +486,7 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
         state.ap -= 1;
         state.m -= 10;
         state.h = Math.max(0, state.h - 3);
-        state.c += 1;
+        state.c += shrineCleanGain;
         if (state.helper.hired) {
           state.helper.nerve = Math.min(10, state.helper.nerve + 2);
         }
@@ -486,7 +496,7 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
         markVisited('shrine');
         note(
           state,
-          `你在城隍香火堂虔诚敬上三炷清香：阴气 −3，洁净 +1${state.helper.hired ? '，顺带替小栓求得平安符（胆量 +2）' : ''}。`
+          `你在城隍香火堂虔诚敬上三炷清香：阴气 −3，洁净 +${shrineCleanGain}${shrineCleanGain > 1 ? '（三号病房通行牌额外 +1）' : ''}${state.helper.hired ? '，顺带替小栓求得平安符（胆量 +2）' : ''}。`
         );
       }
     });
@@ -560,6 +570,7 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
           state.m -= 8;
           state.ty += 1;
           state.calmDone = true;
+          markCharacterMet(state, 'ajie_day');
           note(state, '阿杰在镇群里接了句圆场话，街坊对铺子松了点口风。');
         }
       });
@@ -599,11 +610,13 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
   const intelLimitReached = state.streetIntelUses >= 2;
   const informedToday = state.informedDays.includes(state.day);
 
+  const hasCourierDiscount = hasToken(state, 'courier_receipt');
   for (const sup of STREET_SUPPLIES) {
     const isClinic = sup.id === 'supply_lin_clean';
+    const actualCostM = hasCourierDiscount ? Math.max(4, sup.costM - 3) : sup.costM;
     const stats: Array<{ label: string; value: string; tone?: 'cost' | 'gain' | 'pts' | 'warn' }> = [
       { label: '工时', value: `−${sup.costAp}`, tone: 'cost' },
-      { label: '现金', value: `−${sup.costM}`, tone: 'cost' },
+      { label: '现金', value: `−${actualCostM}`, tone: 'cost' },
       { label: '纸料', value: `+${sup.gainS}`, tone: 'gain' }
     ];
     if (sup.gainC > 0) stats.push({ label: '洁净', value: `+${sup.gainC}`, tone: 'pts' });
@@ -611,7 +624,9 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
     moves.push({
       id: sup.id,
       title: sup.title,
-      detail: sup.detail,
+      detail: hasCourierDiscount
+        ? `工时 −${sup.costAp} · 现金 −${actualCostM}（免单回执减 3） · 纸料 +${sup.gainS}${sup.gainC ? ` · 洁净 +${sup.gainC}` : ''}`
+        : sup.detail,
       presentation: 'card',
       card: {
         kind: 'street_spot',
@@ -619,18 +634,22 @@ export function buildStreetMoves(state: GameState): ActionOption[] {
         client: isClinic ? '林医生诊所 · 洁净药纸' : '镇集杂货摊 · 补给库存',
         icon: isClinic ? 'clinic' : 'supply',
         stats,
-        statusStamp: supplyLimitReached ? '限额' : undefined
+        statusStamp: supplyLimitReached ? '限额' : hasCourierDiscount ? '减3现' : undefined
       },
       reason: supplyLimitReached
         ? '今日进货已达 2 次上限'
-        : costReason(state, sup.costAp, 0, sup.costM),
+        : costReason(state, sup.costAp, 0, actualCostM),
       run: () => {
         state.ap -= sup.costAp;
-        state.m -= sup.costM;
+        state.m -= actualCostM;
         state.s += sup.gainS;
         state.c += sup.gainC;
         state.streetSupplyUses += 1;
-        note(state, `在${sup.vendor}补了货：纸料 +${sup.gainS}${sup.gainC ? `，洁净 +${sup.gainC}` : ''}。`);
+        if (isClinic) markCharacterMet(state, 'doctor_lin');
+        note(
+          state,
+          `在${sup.vendor}补了货（花 ${actualCostM} 现${hasCourierDiscount ? '，四四四回执立减 3' : ''}）：纸料 +${sup.gainS}${sup.gainC ? `，洁净 +${sup.gainC}` : ''}。`
+        );
       }
     });
   }

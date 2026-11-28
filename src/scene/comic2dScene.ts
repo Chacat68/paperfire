@@ -21,6 +21,7 @@ import { createComicPatterns, drawRepublicanFrameCorners, INK } from './comic2d/
 export interface ShopSceneController {
   sync(state: GameState, moves: ActionOption[], dialogue?: StageDialogueView): void;
   highlight(actionId: string, active: boolean): void;
+  setPaused(paused: boolean): void;
   dispose(): void;
 }
 
@@ -423,6 +424,7 @@ export function createComic2DScene(
   let narrow = false;
   let lastTime = 0;
   let active = true;
+  let pausedByModal = false;
   let frame = 0;
   let currentPreset: CameraPreset = 'day_wide';
 
@@ -1014,7 +1016,7 @@ export function createComic2DScene(
   }
 
   function loop(time: number) {
-    if (!active) return;
+    if (!active || pausedByModal) return;
     renderFrame(time);
     frame = requestAnimationFrame(loop);
   }
@@ -1022,7 +1024,9 @@ export function createComic2DScene(
   function startLoop() {
     cancelAnimationFrame(frame);
     lastTime = 0;
-    if (active && !reducedMotion.matches && !document.hidden) frame = requestAnimationFrame(loop);
+    if (active && !pausedByModal && !reducedMotion.matches && !document.hidden) {
+      frame = requestAnimationFrame(loop);
+    }
   }
 
   const ro = new ResizeObserver(resize);
@@ -1052,6 +1056,16 @@ export function createComic2DScene(
   return {
     highlight(actionId: string, isOn: boolean) {
       linkAction(actionId, isOn);
+    },
+    setPaused(paused: boolean) {
+      if (pausedByModal === paused) return;
+      pausedByModal = paused;
+      if (paused) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      } else {
+        startLoop();
+      }
     },
     sync(state: GameState, moves: ActionOption[], dialogue?: StageDialogueView) {
       const first = !gameState;

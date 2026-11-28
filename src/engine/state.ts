@@ -1,6 +1,7 @@
 import { DAY_ORDERS } from '../data/orders';
 import { buildDailyQuests } from '../data/systemShop';
 import type { GameState, Phase, ScenarioId, SkillId, VisitRecord } from '../data/types';
+import { syncMetaFromState } from './meta';
 import { snapshotDayStart } from './systemEngine';
 
 export const STORAGE_KEY = 'paperfire-v4-run';
@@ -45,6 +46,10 @@ export function recordVisit(state: GameState, entry: Omit<VisitRecord, 'id'>): v
 
 export function hasSkill(state: GameState, skillId: SkillId): boolean {
   return Boolean(state.learnedSkills?.includes(skillId));
+}
+
+export function hasToken(state: GameState, tokenId: string): boolean {
+  return state.tokens.some((t) => t.id === tokenId);
 }
 
 export function refreshDayOrders(state: GameState): void {
@@ -145,6 +150,7 @@ export function createRun(mode: ScenarioId = 'd1_full'): GameState {
     threat: 0,
     steps: [],
     outcomes: {},
+    nightOrderHistory: {},
     lastSettleSummary: '',
     badEndReason: '',
     lastDaySnapshot: null,
@@ -253,7 +259,7 @@ export function createRun(mode: ScenarioId = 'd1_full'): GameState {
       ration: 3,
       items: { strip: 0, talisman: 1, wardDoll: 1 },
       favorCards: ['card_liu'],
-      tokens: [{ id: 'bronze_clasp', name: '旧账铜扣', desc: '五日稳局信物 · 证明铺子已在阴间挂号立稳' }],
+      tokens: [{ id: 'bronze_clasp', name: '旧账铜扣', desc: '五日稳局信物 · 夜单履约成功额外多收 10 现金' }],
       outcomes: { 1: 'success', 2: 'success', 3: 'success', 4: 'success', 5: 'success' },
       message: '【系统警报】北巷无声唢呐响起，今夜将迎首场 3 回合顶格诡异「无轿纸新娘」！'
     });
@@ -276,7 +282,7 @@ export function createRun(mode: ScenarioId = 'd1_full'): GameState {
       upgrades: ['copper_bell'],
       items: { strip: 0, talisman: 1, wardDoll: 1 },
       favorCards: ['card_liu'],
-      tokens: [{ id: 'bronze_clasp', name: '旧账铜扣', desc: '五日稳局信物 · 证明铺子已在阴间挂号立稳' }],
+      tokens: [{ id: 'bronze_clasp', name: '旧账铜扣', desc: '五日稳局信物 · 夜单履约成功额外多收 10 现金' }],
       outcomes: { 1: 'success', 2: 'success', 3: 'success', 4: 'success', 5: 'success', 6: 'success', 7: 'success' },
       message: '【异闻奇客专场】落锁入夜即可直面「十二生肖面具官 · 人羊」等热门诡异奇客！'
     });
@@ -335,7 +341,7 @@ export function createRun(mode: ScenarioId = 'd1_full'): GameState {
       items: { strip: 0, talisman: 2, wardDoll: 1 },
       favorCards: ['card_liu', 'card_boy'],
       tokens: [
-        { id: 'bronze_clasp', name: '旧账铜扣', desc: '五日稳局信物' },
+        { id: 'bronze_clasp', name: '旧账铜扣', desc: '五日稳局信物 · 夜单履约成功额外多收 10 现金' },
         { id: 'crimson_knot', name: '合卺红绳结', desc: '顶格信物 · 夜履约结算额外多得 6 纸火点' },
         { id: 'opera_mask_jade', name: '戏面残玉', desc: '顶格信物 · 终局大账清算时额外压低初始局面 1 点' }
       ],
@@ -406,6 +412,13 @@ export function loadRun(): GameState {
         parsed.settleChoreDone ??= false;
         parsed.settleChosenId ??= null;
         parsed.metCharacterIds ??= ['liu_tailor', 'helper_xiaoshuan', 'paper_boy'];
+        if (parsed.metCharacterIds.includes('elder_scholar')) {
+          parsed.metCharacterIds = parsed.metCharacterIds.filter((id) => id !== 'elder_scholar');
+          if (!parsed.metCharacterIds.includes('old_scholar')) {
+            parsed.metCharacterIds.push('old_scholar');
+          }
+        }
+        parsed.nightOrderHistory ??= {};
         parsed.visitRecords ??= [];
         parsed.scannedTrapDays ??= [];
         parsed.forecastDays ??= [];
@@ -439,6 +452,7 @@ export function saveRun(state: GameState): void {
     if (state.phase !== 'site') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
+    syncMetaFromState(state);
   } catch {
     // ignore storage errors
   }

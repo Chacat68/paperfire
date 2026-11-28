@@ -352,7 +352,7 @@ export const CHARACTER_PROFILES: Record<string, CharacterProfile> = {
     appearance: '民国玄墨礼帽、白领长衫马褂、反光死白圆镜，一手算盘一手生死旧簿。',
     traits: ['公事公办', '核验把柄', '逢五对簿'],
     bio: '执掌老镇阴阳流水的阴司核账官，D5 核对前五日旧账赐「旧账铜扣」，D15 携纸马童并立灯下主持最终总清算。账清则礼遇有加，留有把柄则局面加压。',
-    ruleOrHabit: '摊开夜账对簿 → 定住三盏灯火 → 盖朱砂印结清；提前洗掉把柄可显著降压。',
+    ruleOrHabit: '摊开夜账对簿 → 定住平安烛与双红灯火 → 盖朱砂印结清；提前洗掉把柄可显著降压。',
     bubbleIdentity: '阴司核账阴差 · 奉例对簿',
     bubbleTraits: ['礼帽长衫', '算盘生死簿', '核查账上把柄']
   },
@@ -486,7 +486,7 @@ export const CHARACTER_PROFILES: Record<string, CharacterProfile> = {
     firstDay: 15,
     appearance: '纸马童与玄袍大账阴差并立红灯之下，半空悬着「纸火十五日考核」朱砂大印。',
     traits: ['终局考核', '阴阳合账', '把柄与信物结算'],
-    bio: '穿越十五日试用期满的最终清算。只要守稳三盏长明灯、摊开十五日总账压平局面并落下朱砂总印，即可迎向系统解绑与多分支终局。',
+    bio: '穿越十五日试用期满的最终清算。只要守稳双红灯与平安烛、摊开十五日总账压平局面并落下朱砂总印，即可迎向系统解绑与多分支终局。',
     ruleOrHabit: '持有「戏面残玉」与「镇魂铜铃」可大幅压低终审初始局面；阴气 < 10、把柄清零且双口碑达标可入真结局。',
     bubbleIdentity: '十五日终审见证 · 阴阳总账',
     bubbleTraits: ['礼帽生死簿', '灯下总清算', '信物压局加成']
@@ -518,7 +518,7 @@ export const CHARACTER_PROFILES: Record<string, CharacterProfile> = {
     firstDay: 2,
     appearance: '沾冷土的灰中山装、死白镜片、毫无呼吸声，脖颈怪异斜歪三十度。',
     traits: ['歪颈无呼吸', '谎称旧公所', '催你熄灯出门'],
-    bio: '仿冒镇府干部口吻、拿「补盖公章与 88 补贴」作饵的借皮诡，企图诱你吹灭三盏红灯空手跟进荒废多年的后巷旧公所。',
+    bio: '仿冒镇府干部口吻、拿「补盖公章与 88 补贴」作饵的借皮诡，企图诱你吹灭红灯平安烛空手跟进荒废多年的后巷旧公所。',
     ruleOrHabit: '【破绽】旧公所早荒废，且索要熄灯离铺去按「血手印」。识破拒接稳守门内即可。',
     bubbleIdentity: '自称镇府夜班办事员 · 补章急差',
     bubbleTraits: ['制服沾冷土', '避开灯光', '催赴后巷']
@@ -624,7 +624,7 @@ export const CHARACTER_PROFILES: Record<string, CharacterProfile> = {
     appearance: '破毡帽压遮整脸，敲着的裂口竹梆竟发出干骨相撞声，手提写你姓名的丧事白灯。',
     traits: ['敲梆如撞骨', '白灯写你姓名', '逼吹红灯出门'],
     bio: '庙会前夜冒充巡夜打更人的丧阵邪祟，谎称会首改规矩要撤红挂白，企图逼你一口气吹灭铺里红灯。',
-    ruleOrHabit: '【破绽】庙会阴市只认三盏红灯，绝无吹红灯挂白灯之理。',
+    ruleOrHabit: '【破绽】庙会阴市只认门楣红灯与平安烛，绝无吹红灯挂白灯之理。',
     bubbleIdentity: '自称庙会巡夜更夫 · 沿街换灯',
     bubbleTraits: ['破毡帽遮面', '梆声如撞骨', '提惨白纸灯']
   },
@@ -637,8 +637,8 @@ export const CHARACTER_PROFILES: Record<string, CharacterProfile> = {
     sealChar: '伪',
     firstDay: 10,
     appearance: '高大古戏面、眼孔渗漆黑墨汁，狠敲手中铜锣却半点声响不发只扬冷纸灰。',
-    traits: ['敲锣无声', '眼孔渗墨', '催吹三灯钻暗巷'],
-    bio: '庙会顶格夜企图浑水摸鱼的假锣手，谎称城隍庙后台热闹等你修龙头，诱你吹灭三盏红灯钻进无光暗巷。',
+    traits: ['敲锣无声', '眼孔渗墨', '催灭灯烛钻暗巷'],
+    bio: '庙会顶格夜企图浑水摸鱼的假锣手，谎称城隍庙后台热闹等你修龙头，诱你吹灭双红灯与平安烛钻进无光暗巷。',
     ruleOrHabit: '【破绽】长街漆黑死寂却谎称热闹、敲锣无声，且逼你吹灭前两灯离铺。',
     bubbleIdentity: '自称庙会催场锣手 · 抢修龙头',
     bubbleTraits: ['古戏面渗墨', '敲锣扬纸灰', '催钻庙后巷']
@@ -713,7 +713,7 @@ export const CHARACTER_PROFILES: Record<string, CharacterProfile> = {
     firstDay: 15,
     appearance: '佝偻长衫老者满身簌簌掉黑焦纸灰，脖颈露干硬暗红勒痕，脚下石板渗出寒霜。',
     traits: ['满身焦纸灰', '脚渗寒霜', '诱你烧账熄灯'],
-    bio: '第十五夜终审钟响时现身的最后一道绝命诱杀诡，伪装上一任被困穿越者煽动恐慌，诱你在落印前亲手烧毁阴阳总账、吹灭三盏红灯钻进后巷死道。',
+    bio: '第十五夜终审钟响时现身的最后一道绝命诱杀诡，伪装上一任被困穿越者煽动恐慌，诱你在落印前亲手烧毁阴阳总账、吹灭红灯平安烛钻进后巷死道。',
     ruleOrHabit: '【破绽】毁账熄灯等于自撤安全屋庇护，正主终审就在铺内光明合账！',
     bubbleIdentity: '自称上任老掌柜 · 密道逃生',
     bubbleTraits: ['袖落焦纸灰', '脚下渗霜', '煽动烧账熄灯']

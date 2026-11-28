@@ -18,7 +18,7 @@ import {
   settleNight
 } from './engine';
 import { createComic2DScene } from './scene/comic2dScene';
-import { createSfx } from './ui/audio';
+import { createSfx, type ViralAudioKind } from './ui/audio';
 import { createDialogsController } from './ui/dialogs';
 import { createHudController, type ClockView } from './ui/hud';
 import { createPrologueController } from './ui/prologue';
@@ -89,7 +89,7 @@ function formatHHMM(totalMinutes: number): { shichen: string; hhmm: string } {
   };
 }
 
-function buildClockView(paused: boolean): ClockView {
+function buildClockView(paused: boolean, pauseTag?: string): ClockView {
   const totalSec = Math.max(1, getPhaseDurationSec(state.phase));
   const remSec = Math.max(0, Math.min(totalSec, state.phaseRemainingSec));
   if (state.phase === 'day') {
@@ -101,7 +101,8 @@ function buildClockView(paused: boolean): ClockView {
       countdownText: formatMMSS(remSec),
       progressPct: (remSec / totalSec) * 100,
       urgent: remSec <= 30,
-      paused
+      paused,
+      pauseTag
     };
   }
   if (state.phase === 'board' || state.phase === 'site') {
@@ -113,7 +114,8 @@ function buildClockView(paused: boolean): ClockView {
       countdownText: formatMMSS(remSec),
       progressPct: (remSec / totalSec) * 100,
       urgent: remSec <= 30,
-      paused
+      paused,
+      pauseTag
     };
   }
   if (state.phase === 'settle') {
@@ -143,12 +145,26 @@ function buildClockView(paused: boolean): ClockView {
   };
 }
 
-function isClockPaused(): boolean {
+function isModalPaused(): boolean {
   return prologue.isOpen() || Boolean(dialogs.isAnyOpen()) || document.hidden;
 }
 
+function isReadingDialogue(): boolean {
+  return (
+    (state.phase === 'day' && state.dayTab === 'orders' && Boolean(state.selectedOrderId)) ||
+    (state.phase === 'board' && Boolean(state.selectedNightOrderId))
+  );
+}
+
+function isClockPaused(): boolean {
+  return isModalPaused() || isReadingDialogue();
+}
+
 function syncClockHud() {
-  hud.renderClock(buildClockView(isClockPaused()));
+  const modalPaused = isModalPaused();
+  const reading = !modalPaused && isReadingDialogue();
+  sceneCtrl?.setPaused(modalPaused);
+  hud.renderClock(buildClockView(modalPaused || reading, reading ? '听客暂停' : '暂停'));
 }
 
 const dialogs = createDialogsController(
@@ -166,6 +182,7 @@ const dialogs = createDialogsController(
         syncClockHud();
         document.getElementById('stage-title')?.focus({ preventScroll: true });
       });
+      syncClockHud();
     } else {
       hud.showTransition('卷', '晨光初起 · 启卷开铺', DAY_META[state.day]?.title ?? '纸火', title);
       document.getElementById('stage-title')?.focus({ preventScroll: true });
@@ -175,13 +192,17 @@ const dialogs = createDialogsController(
     if (redeemSystemSupply(state, supplyId)) {
       sfx.reward();
       render();
+      return true;
     }
+    return false;
   },
   (upgradeId) => {
     if (buyShopUpgrade(state, upgradeId)) {
       sfx.stamp();
       render();
+      return true;
     }
+    return false;
   },
   () => {
     prologue.play(() => {
@@ -189,6 +210,7 @@ const dialogs = createDialogsController(
       saveRun(state);
       syncClockHud();
     });
+    syncClockHud();
   },
   () => {
     clearSavedRun();
@@ -204,6 +226,7 @@ const dialogs = createDialogsController(
       syncClockHud();
       document.getElementById('stage-title')?.focus({ preventScroll: true });
     });
+    syncClockHud();
   },
   () => sfx.paper(),
   {
@@ -283,10 +306,21 @@ function render() {
   saveRun(state);
 }
 
+function resolveViralAudio(moveId: string): ViralAudioKind | null {
+  if (moveId === 'pick_night_n_vir_courier' || moveId === 'vir-five-star') return 'courier';
+  if (moveId === 'pick_night_n_vir_surgeon' || moveId === 'vir-refuse-pill') return 'surgeon';
+  if (moveId === 'pick_night_n_vir_senior' || moveId === 'vir-listen-elegy') return 'senior';
+  if (moveId === 'pick_night_n_vir_zodiac_goat' || moveId === 'vir-rule-bet') return 'zodiac_goat';
+  if (moveId === 'pick_night_n_vir_jester' || moveId === 'vir-counter-bluff') return 'jester';
+  if (moveId === 'pick_night_n_vir_puppets' || moveId === 'vir-cut-echo') return 'puppets';
+  return null;
+}
+
 function runMove(move: ActionOption) {
   const prevPhase = state.phase;
   const prevDay = state.day;
   const prevPts = state.pts;
+  const viralAudio = resolveViralAudio(move.id);
   move.run();
   if (dialogs.isAnyOpen()?.id === 'settings-dialog') return;
 
@@ -334,7 +368,11 @@ function runMove(move: ActionOption) {
   } else if (move.id.startsWith('reject_night_')) {
     sfx.omen();
   } else if (move.id.startsWith('pick_night_')) {
-    sfx.knock();
+    if (viralAudio) sfx.viralCue(viralAudio);
+    else sfx.knock();
+  } else if (move.id.startsWith('vir-') && viralAudio) {
+    sfx.viralCue(viralAudio);
+    sfx.stamp();
   } else if (move.id === 'advance_night_dialogue') {
     sfx.creak();
   } else if (move.id === 'return_to_shop') {
@@ -387,7 +425,10 @@ function tickPhaseClock() {
 
   state.phaseRemainingSec = Math.max(0, state.phaseRemainingSec - 1);
   if (state.phaseRemainingSec > 0) {
-    saveRun(state);
+    // 节流存盘：仅每 10 秒同步写入一次 localStorage，降低主线程序列化开销（切后台与卸载时另有兜底保存）
+    if (state.phaseRemainingSec % 10 === 0) {
+      saveRun(state);
+    }
     syncClockHud();
     return;
   }
@@ -555,6 +596,7 @@ document.querySelectorAll<HTMLDialogElement>('dialog').forEach((dlg) => {
   dlg.addEventListener('close', syncClockHud);
 });
 document.addEventListener('visibilitychange', () => {
+  if (document.hidden) saveRun(state);
   syncClockHud();
   syncAmbientAudio();
 });
@@ -570,4 +612,5 @@ if (!state.introSeen && state.day === 1) {
     saveRun(state);
     syncClockHud();
   });
+  syncClockHud();
 }

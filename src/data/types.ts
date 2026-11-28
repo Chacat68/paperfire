@@ -364,6 +364,8 @@ export interface GameState {
   threat: number;
   steps: string[];
   outcomes: Record<number, NightOutcome>;
+  nightOrderHistory?: Record<number, string>;
+  metaRecordedEnd?: boolean;
   lastSettleSummary: string;
   badEndReason: string;
   lastDaySnapshot: string | null;

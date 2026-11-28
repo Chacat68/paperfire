@@ -7,7 +7,7 @@ import {
 } from '../data/night';
 import { buildDailyQuests, FAVOR_CARDS } from '../data/systemShop';
 import type { ActionOption, CardIconKind, GameState, NightOrderDef, NightOutcome } from '../data/types';
-import { DAY_DURATION_SEC, hasSkill, markCharacterMet, note, recordVisit, refreshDayOrders } from './state';
+import { DAY_DURATION_SEC, hasSkill, hasToken, markCharacterMet, note, recordVisit, refreshDayOrders } from './state';
 import { snapshotDayStart, syncAndClaimDailyQuests } from './systemEngine';
 
 function pickNightOrderIcon(order: NightOrderDef): CardIconKind {
@@ -54,7 +54,12 @@ export function getActiveNightOrder(state: GameState): NightOrderDef {
   return getScheduledNightOrder(state.day, state.h);
 }
 
-export function computeInitialThreat(state: GameState, order: NightOrderDef): number {
+export interface ThreatBreakdown {
+  threat: number;
+  parts: string[];
+}
+
+export function computeThreatBreakdown(state: GameState, order: NightOrderDef): ThreatBreakdown {
   // 对齐设计稿 4.4 节公式：Threat0 = clamp(risk + clamp(floor(H/6), 0, 2) + (替代料 ? 1 : 0) - 铺面/信物/法眼减压, 1, 5)
   const yinBonus = Math.min(2, Math.floor(state.h / 6));
   const proxyBonus = state.usedProxyToday ? 1 : 0;
@@ -63,7 +68,24 @@ export function computeInitialThreat(state: GameState, order: NightOrderDef): nu
   const eyeBonus = hasSkill(state, 'sight_eye') ? 1 : 0;
   const maskBonus =
     order.id === 'n15_final_ledger' && state.tokens.some((t) => t.id === 'opera_mask_jade') ? 1 : 0;
-  return Math.max(1, Math.min(5, order.risk + yinBonus + proxyBonus + handleBonus - bellBonus - eyeBonus - maskBonus));
+  const threat = Math.max(
+    1,
+    Math.min(5, order.risk + yinBonus + proxyBonus + handleBonus - bellBonus - eyeBonus - maskBonus)
+  );
+
+  const parts: string[] = [`基础 ${order.risk}`];
+  if (yinBonus > 0) parts.push(`阴气 +${yinBonus}`);
+  if (proxyBonus > 0) parts.push(`替代料 +${proxyBonus}`);
+  if (handleBonus > 0) parts.push(`把柄 +${handleBonus}`);
+  if (bellBonus > 0) parts.push(`铜铃 −${bellBonus}`);
+  if (eyeBonus > 0) parts.push(`法眼 −${eyeBonus}`);
+  if (maskBonus > 0) parts.push(`残玉 −${maskBonus}`);
+
+  return { threat, parts };
+}
+
+export function computeInitialThreat(state: GameState, order: NightOrderDef): number {
+  return computeThreatBreakdown(state, order).threat;
 }
 
 export function startSite(state: GameState): void {
@@ -82,11 +104,14 @@ export function settleNight(state: GameState, result: NightOutcome): void {
   const profile = getCharacterForNightOrder(order);
   markCharacterMet(state, profile.id);
   state.outcomes[state.day] = result;
+  state.nightOrderHistory ??= {};
+  state.nightOrderHistory[state.day] = order.id;
   const deposit = order.promisedKey === 'wu_d2' && state.promiseWu ? state.deposit : 0;
 
   if (result === 'success') {
-    const due = Math.max(0, order.pay - deposit);
-    const knotBonus = state.tokens.some((t) => t.id === 'crimson_knot') ? 6 : 0;
+    const bronzeCashBonus = hasToken(state, 'bronze_clasp') ? 10 : 0;
+    const due = Math.max(0, order.pay - deposit) + bronzeCashBonus;
+    const knotBonus = hasToken(state, 'crimson_knot') ? 6 : 0;
     const masterBonus = hasSkill(state, 'craft_master') ? 4 : 0;
     const ptsGain = order.ptsReward + knotBonus + masterBonus;
     state.m += due;
@@ -98,7 +123,7 @@ export function settleNight(state: GameState, result: NightOutcome): void {
       state.uneasyCleanDays += 1;
     }
 
-    let extraText = '';
+    let extraText = bronzeCashBonus ? '（旧账铜扣额外 +10 现）' : '';
     if (order.tokenReward && !state.tokens.some((t) => t.id === order.tokenReward!.id)) {
       state.tokens.push(order.tokenReward);
       extraText += ` 获得信物「${order.tokenReward.name}」。`;
@@ -223,6 +248,24 @@ export function settleNight(state: GameState, result: NightOutcome): void {
     note(state, state.lastSettleSummary);
   }
 
+  // 若今夜转接了其他夜单（例如异闻奇客）而爽约了白天吴支书承诺单或绕开了被盯大单，仍须承担相应后果
+  const skippedWuPromise = state.day === 2 && state.promiseWu && order.id !== 'n2_wu_plain' && result !== 'rested';
+  const skippedWatchedDoor =
+    state.watchedTonight && !order.watched && result !== 'rested' && result !== 'refused';
+  if (skippedWuPromise) {
+    state.audit = true;
+    const breachMsg = '（未按约招待吴支书牵线的借面客，次日仍将引来镇里抽查。）';
+    state.lastSettleSummary = `${state.lastSettleSummary} ${breachMsg}`.trim();
+    note(state, '【失约余波】今夜未履约借面客之约，次日将引来镇里抽查。');
+  }
+  if (skippedWatchedDoor) {
+    state.h += 1;
+    state.handle += 1;
+    const watchMsg = '（门外原本窥视铺门的被盯大单未封敕，阴气 +1 且账上多留 1 笔把柄。）';
+    state.lastSettleSummary = `${state.lastSettleSummary} ${watchMsg}`.trim();
+    note(state, '【窥视余波】绕开被盯大单未应门封敕，阴气 +1、把柄 +1。');
+  }
+
   state.phase = 'settle';
   state.phaseRemainingSec = 0;
   state.settleChoreDone = false;
@@ -241,6 +284,8 @@ export function triggerNightTrap(state: GameState, trapOrder: NightOrderDef): vo
     state.items.wardDoll -= 1;
     state.h += 3;
     state.outcomes[state.day] = 'failed';
+    state.nightOrderHistory ??= {};
+    state.nightOrderHistory[state.day] = trapOrder.id;
     state.phase = 'settle';
     state.phaseRemainingSec = 0;
     state.settleChoreDone = false;
@@ -288,7 +333,11 @@ export function exposeNightTrap(state: GameState, trapOrder: NightOrderDef): voi
   const profile = getCharacterForNightOrder(trapOrder);
   markCharacterMet(state, profile.id);
   const echoBonus = hasSkill(state, 'sight_echo') ? 4 : 0;
-  const trapPts = 6 + echoBonus;
+  const zodiacBonus = hasToken(state, 'zodiac_chip') ? 4 : 0;
+  const trapPts = 6 + echoBonus + zodiacBonus;
+  const bonusTags: string[] = [];
+  if (echoBonus) bonusTags.push(`听声辨影 +${echoBonus} 点`);
+  if (zodiacBonus) bonusTags.push(`生肖铜筹 +${zodiacBonus} 点`);
   if (!state.rejectedNightOrderIds.includes(trapOrder.id)) {
     state.rejectedNightOrderIds.push(trapOrder.id);
     state.pts += trapPts;
@@ -304,14 +353,14 @@ export function exposeNightTrap(state: GameState, trapOrder: NightOrderDef): voi
       result: 'trap_exposed',
       cashDelta: 0,
       ptsDelta: trapPts,
-      note: echoBonus ? '听声辨影识破诱杀 · 额外 +4 点 · 阴气 −1' : '识破诱杀骗局 · 阴气 −1'
+      note: bonusTags.length ? `识破诱杀（${bonusTags.join(' · ')}）· 阴气 −1` : '识破诱杀骗局 · 阴气 −1'
     });
   }
   state.selectedNightOrderId = null;
   state.dialogueStep = 0;
   const baseText =
     trapOrder.trapExposeText ?? '你识破门外诡异的诱杀骗局，死守门闩绝不跨出铺门（纸火点 +6，阴气 −1）。';
-  note(state, echoBonus ? `${baseText}（听声辨影额外赏 +${echoBonus} 纸火点！）` : baseText);
+  note(state, bonusTags.length ? `${baseText}（额外加成：${bonusTags.join('、')}！）` : baseText);
   syncAndClaimDailyQuests(state);
 }
 
@@ -360,6 +409,12 @@ export function dawn(state: GameState): void {
     state.c += 1;
   }
 
+  // 断弦红丝谱（血红衣学姐信物）被动：高阴气时晨前琴音自动涤荡阴气 −1
+  const elegyTriggered = hasToken(state, 'elegy_score') && state.h >= 8;
+  if (elegyTriggered) {
+    state.h = Math.max(0, state.h - 1);
+  }
+
   // 生存口粮消耗（P0 #5）
   let starveNote = '';
   if (state.ration >= 1) {
@@ -380,7 +435,7 @@ export function dawn(state: GameState): void {
       state.starveStreak >= 2
         ? '连续两日未能从初始系统兑换生存口粮，你在诡异小镇的浓雾中彻底耗尽精力，铺门悄然易主。'
         : state.h >= 20
-          ? '铺面阴气冲破 20 红线，白昼不再降临，三盏红灯同时熄灭，规则清算降临。'
+          ? '铺面阴气冲破 20 红线，白昼不再降临，门楣双红灯与平安烛同时熄灭，规则清算降临。'
           : '顶格诡异失守叠加上回留下的「不对劲」，次日天明时纸扎铺只剩一地纸灰。';
     state.message = state.badEndReason;
     return;
@@ -452,6 +507,10 @@ export function dawn(state: GameState): void {
     note(state, `第 ${state.day} 日天亮开铺，迎接活人订单。${state.ration === 0 ? '（注意：生存口粮已耗尽，请尽快用纸火点兑换！）' : ''}`);
   }
 
+  if (elegyTriggered) {
+    note(state, '【断弦红丝谱】晨雾散尽前隐约响起一节安魂琴音，替铺面涤荡阴气 −1。');
+  }
+
   if (starveNote) {
     note(state, starveNote);
   }
@@ -512,6 +571,18 @@ export function buildNightBoardMoves(state: GameState): ActionOption[] {
         const candidate = getNightOrderById(id);
         return Boolean(candidate?.isTrap && state.rejectedNightOrderIds.includes(id));
       });
+      const hasOtherUnrejectedReal = state.todayNightOrders.some((id) => {
+        if (id === order.id || state.rejectedNightOrderIds.includes(id)) return false;
+        const candidate = getNightOrderById(id);
+        return Boolean(candidate && !candidate.isTrap);
+      });
+      const willBreachWuPromise = !order.isTrap && state.day === 2 && state.promiseWu && order.id !== 'n2_wu_plain';
+      const willSkipWatched = !order.isTrap && state.watchedTonight && !order.watched;
+      const acceptDanger = willBreachWuPromise
+        ? '白天已收吴支书订金约好借面客。今夜转接此单将视为对借面客失约，次日引来镇里抽查。确定转接？'
+        : willSkipWatched
+          ? '今夜铺门已被盯上。转接此单而不应门封敕，会在结账时额外阴气 +1 并留下一笔把柄。确定转接？'
+          : undefined;
       const acceptDetail = promised
         ? `尾款+${order.pay - state.deposit} · 点+${order.ptsReward} · 局面 ${computeInitialThreat(state, order)}`
         : order.isTrap
@@ -522,17 +593,19 @@ export function buildNightBoardMoves(state: GameState): ActionOption[] {
         ? '这笔单白天已收吴支书订金。若现在拒接会记为失约失败，且次日镇里要来抽查。'
         : !order.isTrap && order.watched
           ? '这是系统标记的被盯/必核大单。硬拒会让阴气 +1，并在账上留下一笔把柄。'
-          : !order.isTrap && trapAlreadyExposed
-            ? '门外诱杀诡已被识破，这位正是今夜正规诡客。拒接将直接结束今夜且无夜赏，确定拒接？'
+          : !order.isTrap && trapAlreadyExposed && !hasOtherUnrejectedReal
+            ? '门外诱杀诡已被识破，这位正是今夜仅余的正规诡客。拒接将直接结束今夜且无夜赏，确定拒接？'
             : undefined;
 
       const rejectDetail = promised
         ? '失约失败 · 次日抽查'
         : !order.isTrap && order.watched
           ? '被盯大单 · 阴气+1 留把柄'
-          : !order.isTrap && trapAlreadyExposed
+          : !order.isTrap && trapAlreadyExposed && !hasOtherUnrejectedReal
             ? '放弃正规夜单 · 结束今夜'
-            : '疑有破绽 · 严词拒接守门';
+            : !order.isTrap && hasOtherUnrejectedReal
+              ? '婉拒此位 · 仍可转听别家'
+              : '疑有破绽 · 严词拒接守门';
 
       return [
         {
@@ -540,6 +613,7 @@ export function buildNightBoardMoves(state: GameState): ActionOption[] {
           title: order.peak && !order.isTrap ? '接单 · 顶格履约' : '接下此单',
           detail: acceptDetail,
           primary: true,
+          danger: acceptDanger,
           run: () => {
             if (order.isTrap) {
               triggerNightTrap(state, order);
@@ -553,7 +627,11 @@ export function buildNightBoardMoves(state: GameState): ActionOption[] {
         },
         {
           id: `reject_night_${order.id}`,
-          title: promised ? '拒接承诺单' : trapAlreadyExposed && !order.isTrap ? '婉拒此单' : '识破 / 拒接',
+          title: promised
+            ? '拒接承诺单'
+            : trapAlreadyExposed && !order.isTrap
+              ? '婉拒此单'
+              : '识破 / 拒接',
           detail: rejectDetail,
           danger: rejectDanger,
           run: () => {

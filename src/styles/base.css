@@ -279,6 +279,14 @@ body.in-site[data-threat="high"] .atmosphere{animation:threatPulse 5.2s ease-in-
 }
 .pip.lit{background:#f3be80;border-color:#ffdca8;box-shadow:0 0 7px rgba(243,190,128,.55)}
 .meter.threat .pip.lit{background:#dc5c45;border-color:#ff947d;box-shadow:0 0 8px rgba(220,92,69,.7)}
+.turn-alert{
+  padding:2px 8px;font:700 .68rem var(--serif);letter-spacing:.04em;white-space:nowrap;
+  border:1px solid rgba(240,181,118,.65);background:rgba(155,78,32,.34);color:#ffe2b8;
+}
+.turn-alert.critical{
+  border-color:rgba(232,96,74,.88);background:rgba(176,38,28,.48);color:#ffdfd6;
+  animation:countdownPulse 1.1s ease-in-out infinite;
+}
 .encounter-taboo{
   margin-top:6px;padding-top:6px;border-top:1px solid rgba(224,97,73,.25);
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
@@ -311,8 +319,8 @@ body.in-site[data-threat="high"] .atmosphere{animation:threatPulse 5.2s ease-in-
   backdrop-filter:blur(7px);
 }
 .resources div{
-  position:relative;display:flex;align-items:center;gap:6px;
-  padding:6px 10px;min-width:0;
+  position:relative;display:flex;align-items:center;gap:5px;
+  padding:6px 8px;min-width:0;
   transition:background-color .28s ease;
 }
 .resources div+div{border-left:1px solid var(--soft-line)}

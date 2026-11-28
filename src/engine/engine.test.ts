@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { CHARACTER_LIST, getCharacterForDayOrder, getCharacterForNightOrder } from '../data/characters';
+import { CHARACTER_LIST, CHARACTER_PROFILES, getCharacterForDayOrder, getCharacterForNightOrder } from '../data/characters';
 import { ALL_NIGHT_ORDERS, DAY_META, NIGHT_ORDERS, getScheduledNightOrder, getScheduledTrapOrder } from '../data/night';
 import { DAY_ORDERS, ORDER_BY_ID } from '../data/orders';
 import {
   DAY_DURATION_SEC,
   NIGHT_DURATION_SEC,
   buyShopUpgrade,
+  clearMetaArchive,
   clearSavedRun,
   computeInitialThreat,
   createRun,
@@ -17,13 +18,15 @@ import {
   getStageView,
   getSystemDiagnostics,
   learnSystemSkill,
+  loadMetaArchive,
   loadRun,
   redeemSystemSupply,
   rollbackToLastDay,
   saveRun,
   scanTonightTrapIntel,
   settleNight,
-  startSite
+  startSite,
+  syncMetaFromState
 } from './index';
 import { LEGACY_STORAGE_KEY, STORAGE_KEY } from './state';
 
@@ -889,11 +892,12 @@ describe('Paperfire D1–D15 Engine (P0/P1/P2 Full Suite)', () => {
     expect(st.h).toBe(h0 - 1);
     expect(getStageView(st, () => {}).moves.find((m) => m.id === 'explore_teahouse')?.reason).toBeTruthy();
 
-    // 2. Ink Bookshop: +10 pts, +1 C, meets elder_scholar; 2nd cumulative visit auto-decrypts a free town intel doc!
+    // 2. Ink Bookshop: +10 pts, +1 C, meets old_scholar (valid profile ID); 2nd cumulative visit auto-decrypts a free town intel doc!
     const pts0 = st.pts;
     getStageView(st, () => {}).moves.find((m) => m.id === 'explore_bookstore')!.run();
     expect(st.pts).toBe(pts0 + 10);
-    expect(st.metCharacterIds).toContain('elder_scholar');
+    expect(st.metCharacterIds).toContain('old_scholar');
+    expect(st.metCharacterIds).not.toContain('elder_scholar');
     expect(st.bookstoreVisitsTotal).toBe(1);
 
     // 3. City God Shrine: -3 yin, +1 C, helper nerve +2
@@ -961,7 +965,200 @@ describe('Paperfire D1–D15 Engine (P0/P1/P2 Full Suite)', () => {
 
       expect(st.phase).toBe('settle');
       expect(st.outcomes[c.day]).toBe('success');
+      expect(st.nightOrderHistory?.[c.day]).toBe(c.orderId);
       expect(st.tokens.some((t) => t.id === c.tokenId)).toBe(true);
     }
+  });
+
+  it('prevents bypassing D2 Wu promise or D4 watched door via viral guests, keeps 3-card board copy accurate, and guards site actions', () => {
+    // 1. D2 Wu promise + switching to viral courier still triggers D3 audit and warns before accepting
+    const d2 = createRun('d2_story');
+    d2.promiseWu = true;
+    d2.deposit = 18;
+    d2.s = 8;
+    d2.c = 8;
+    flipToNight(d2);
+    expect(d2.todayNightOrders).toContain('n_vir_courier');
+    getStageView(d2, () => {}).moves.find((m) => m.id === 'pick_night_n_vir_courier')!.run();
+    d2.dialogueStep = 2;
+    const d2Accept = getStageView(d2, () => {}).moves.find((m) => m.id === 'accept_night_n_vir_courier')!;
+    expect(d2Accept.danger).toContain('借面客');
+    d2Accept.run();
+    expect(d2.phase).toBe('site');
+
+    // System supply & upgrade redemption are blocked inside site phase
+    d2.pts = 100;
+    d2.m = 100;
+    expect(redeemSystemSupply(d2, 'sys_ration_1')).toBe(false);
+    expect(buyShopUpgrade(d2, 'copper_bell')).toBe(false);
+
+    // card_boy is disabled once threat is 0 and all pre-steps are met
+    d2.favorCards = ['card_boy'];
+    d2.threat = 0;
+    d2.steps = ['rite_main'];
+    const boyCardMove = getStageView(d2, () => {}).moves.find((m) => m.id === 'use-card-boy');
+    expect(boyCardMove?.reason).toBeTruthy();
+
+    getStageView(d2, () => {}).moves.find((m) => m.id === 'seal')!.run();
+    expect(d2.phase).toBe('settle');
+    expect(d2.outcomes[2]).toBe('success');
+    expect(d2.nightOrderHistory?.[2]).toBe('n_vir_courier');
+    expect(d2.audit).toBe(true);
+
+    // 2. D4 watched door (h >= 12) + switching to viral surgeon warns and applies watched penalty
+    const d4 = createRun('d1_full');
+    d4.day = 4;
+    d4.h = 12;
+    d4.s = 8;
+    d4.c = 8;
+    flipToNight(d4);
+    expect(d4.watchedTonight).toBe(true);
+    // Exposing D4 trap should NOT say rejecting n_vir_surgeon ends the night while n4_watched_door remains
+    const trapId = d4.todayNightOrders.find((id) => id.startsWith('trap_'))!;
+    getStageView(d4, () => {}).moves.find((m) => m.id === `pick_night_${trapId}`)!.run();
+    d4.dialogueStep = 2;
+    getStageView(d4, () => {}).moves.find((m) => m.id === `reject_night_${trapId}`)!.run();
+
+    getStageView(d4, () => {}).moves.find((m) => m.id === 'pick_night_n_vir_surgeon')!.run();
+    d4.dialogueStep = 2;
+    const d4Moves = getStageView(d4, () => {}).moves;
+    expect(d4Moves.find((m) => m.id === 'accept_night_n_vir_surgeon')?.danger).toContain('把柄');
+    expect(d4Moves.find((m) => m.id === 'reject_night_n_vir_surgeon')?.danger).toBeUndefined();
+    expect(d4Moves.find((m) => m.id === 'reject_night_n_vir_surgeon')?.detail).toContain('转听别家');
+
+    const handleBefore = d4.handle;
+    d4Moves.find((m) => m.id === 'accept_night_n_vir_surgeon')!.run();
+    settleNight(d4, 'success');
+    expect(d4.handle).toBe(handleBefore + 1);
+    expect(d4.nightOrderHistory?.[4]).toBe('n_vir_surgeon');
+
+    // 3. Street clinic & rumor calming mark doctor_lin and ajie_day, and legacy elder_scholar migrates cleanly
+    const st = createRun('d1_full');
+    st.day = 4;
+    st.rumor = true;
+    st.dayTab = 'street';
+    getStageView(st, () => {}).moves.find((m) => m.id === 'supply_lin_clean')!.run();
+    expect(st.metCharacterIds).toContain('doctor_lin');
+    st.streetZone = 'back';
+    getStageView(st, () => {}).moves.find((m) => m.id === 'calm_rumor')!.run();
+    expect(st.metCharacterIds).toContain('ajie_day');
+    for (const cid of st.metCharacterIds ?? []) {
+      expect(CHARACTER_PROFILES[cid], `Invalid characterId in metCharacterIds: ${cid}`).toBeDefined();
+    }
+
+    // 4. Legacy saves containing typo 'elder_scholar' migrate cleanly to 'old_scholar'
+    const mem = createMemoryStorage();
+    Object.defineProperty(globalThis, 'localStorage', { value: mem, configurable: true, writable: true });
+    const legacy = createRun('d1_full');
+    legacy.metCharacterIds = ['liu_tailor', 'elder_scholar'];
+    mem.setItem(STORAGE_KEY, JSON.stringify(legacy));
+    const loaded = loadRun();
+    expect(loaded.metCharacterIds).toContain('old_scholar');
+    expect(loaded.metCharacterIds).not.toContain('elder_scholar');
+    expect(loaded.nightOrderHistory).toEqual({});
+  });
+
+  it('activates all 7 newly wired token passives, viral token milestone, uneasy progress text, and cross-run meta archive', () => {
+    const mem = createMemoryStorage();
+    Object.defineProperty(globalThis, 'localStorage', { value: mem, configurable: true, writable: true });
+    clearMetaArchive();
+
+    const st = createRun('d1_full');
+    st.m = 80;
+    st.s = 10;
+    st.c = 6;
+    st.h = 9;
+    st.ration = 3;
+    st.tokens.push(
+      { id: 'bronze_clasp', name: '旧账铜扣', desc: '' },
+      { id: 'courier_receipt', name: '四四四免单回执', desc: '' },
+      { id: 'ward_badge', name: '三号病房通行牌', desc: '' },
+      { id: 'elegy_score', name: '断弦红丝谱', desc: '' },
+      { id: 'zodiac_chip', name: '十二生肖铜筹', desc: '' },
+      { id: 'red_zhong_die', name: '红中老千骰', desc: '' },
+      { id: 'puppet_cross', name: '双生提线木栓', desc: '' }
+    );
+
+    // 1. courier_receipt reduces front-street supply cost by 3 cash (10 -> 7)
+    st.dayTab = 'street';
+    const mBeforeSupply = st.m;
+    getStageView(st, () => {}).moves.find((m) => m.id === 'supply_small')!.run();
+    expect(st.m).toBe(mBeforeSupply - 7);
+
+    // 2. ward_badge gives +2 C (instead of +1) at City God Shrine
+    st.streetZone = 'back';
+    const cBeforeShrine = st.c;
+    getStageView(st, () => {}).moves.find((m) => m.id === 'explore_shrine')!.run();
+    expect(st.c).toBe(cBeforeShrine + 2);
+
+    // 3. red_zhong_die adds +4 cash to daytime standard/fine fulfillment + auto-claims ms_viral_3 milestone (+22 pts)
+    st.dayTab = 'orders';
+    const d1Order = ORDER_BY_ID['d1_chen_white'];
+    const mBeforeOrder = st.m;
+    const ptsBeforeOrder = st.pts;
+    fulfillDayOrder(st, d1Order, 'standard');
+    expect(st.m).toBe(mBeforeOrder + d1Order.payBase + 4);
+    expect(st.claimedCodexMilestones).toContain('ms_viral_3');
+    expect(st.pts).toBeGreaterThanOrEqual(ptsBeforeOrder + (d1Order.ptsReward ?? 4) + 22);
+
+    // 4. zodiac_chip adds +4 pts when exposing night trap (base 6 + 4 = 10)
+    flipToNight(st);
+    const trapId = st.todayNightOrders.find((id) => id.startsWith('trap_'))!;
+    getStageView(st, () => {}).moves.find((m) => m.id === `pick_night_${trapId}`)!.run();
+    st.dialogueStep = 2;
+    const ptsBeforeExpose = st.pts;
+    getStageView(st, () => {}).moves.find((m) => m.id === `reject_night_${trapId}`)!.run();
+    expect(st.pts).toBe(ptsBeforeExpose + 10);
+
+    // 5. puppet_cross boosts first use-paper in site from -1 to -2 threat, and bronze_clasp adds +10 cash on success
+    st.activeNightOrderId = 'n1_alley_sendoff';
+    startSite(st);
+    st.threat = 3;
+    getStageView(st, () => {}).moves.find((m) => m.id === 'use-paper')!.run();
+    expect(st.threat).toBe(1); // -2 from puppet_cross boost!
+    // Second use-paper returns to -1
+    getStageView(st, () => {}).moves.find((m) => m.id === 'use-paper')!.run();
+    expect(st.threat).toBe(0);
+
+    const mBeforeNight = st.m;
+    settleNight(st, 'success');
+    expect(st.m).toBe(mBeforeNight + NIGHT_ORDERS.n1_alley_sendoff.pay + 10);
+
+    // 6. uneasy progress is surfaced explicitly in settle card + ward_badge grants +3 C on clean shop
+    st.uneasy = true;
+    st.uneasyCleanDays = 0;
+    const cleanCard0 = getStageView(st, () => {}).moves.find((m) => m.id === 'settle_clean_shop')!;
+    expect(cleanCard0.detail).toContain('消煞进度 0/1');
+    st.uneasyCleanDays = 1;
+    const cleanCard1 = getStageView(st, () => {}).moves.find((m) => m.id === 'settle_clean_shop')!;
+    expect(cleanCard1.card?.statusStamp).toBe('可消煞');
+    const cBeforeClean = st.c;
+    cleanCard1.run();
+    expect(st.c).toBe(cBeforeClean + 3);
+    expect(st.uneasy).toBe(false);
+
+    // 7. elegy_score lowers H by 1 on dawn when H >= 8
+    st.h = 9;
+    dawn(st);
+    expect(st.h).toBe(8);
+
+    // 8. Cross-run meta archive persists met characters, tokens, intel, and unlocked endings across clearSavedRun
+    const endRun = createRun('d15_final');
+    endRun.metCharacterIds = ['liu_tailor', 'zodiac_goat'];
+    endRun.unlockedIntelIds = ['intel_three_lamps'];
+    endRun.tokens.push({ id: 'zodiac_chip', name: '十二生肖铜筹', desc: '' });
+    endRun.outcomes[15] = 'success';
+    endRun.phase = 'end';
+    saveRun(endRun);
+    syncMetaFromState(endRun); // idempotent on repeated sync
+    clearSavedRun();
+
+    const meta = loadMetaArchive();
+    expect(meta.metCharacterIds).toContain('zodiac_goat');
+    expect(meta.unlockedIntelIds).toContain('intel_three_lamps');
+    expect(meta.collectedTokenIds).toContain('zodiac_chip');
+    expect(meta.endingsUnlocked).toContain('true_ending');
+    expect(meta.runsCompleted).toBe(1);
+    expect(meta.bestPts).toBe(endRun.pts);
   });
 });

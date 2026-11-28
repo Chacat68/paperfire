@@ -2,6 +2,13 @@ const AUDIO_KEY = 'paperfire-audio-1';
 const VOLUME_KEY = 'paperfire-volume-1';
 
 export type AmbientMode = 'off' | 'day' | 'night' | 'site';
+export type ViralAudioKind =
+  | 'courier'
+  | 'surgeon'
+  | 'senior'
+  | 'zodiac_goat'
+  | 'jester'
+  | 'puppets';
 
 export interface SfxEngine {
   readonly enabled: boolean;
@@ -21,6 +28,7 @@ export interface SfxEngine {
   creak(): void;
   slap(): void;
   badEnd(): void;
+  viralCue(kind: ViralAudioKind): void;
 }
 
 export function createSfx(): SfxEngine {
@@ -363,6 +371,55 @@ export function createSfx(): SfxEngine {
       runOrQueue((ac) => {
         tone(ac, 'sine', 130.8, 98, 1.2, 0.065, 0);
         tone(ac, 'triangle', 196, 146.8, 0.95, 0.035, 0.08);
+      });
+    },
+    viralCue(kind: ViralAudioKind) {
+      runOrQueue((ac) => {
+        if (kind === 'courier') {
+          // 4:44 外卖员：略带诡异失真的电子「叮—咚」接单铃 + 盒盖闷响
+          tone(ac, 'sine', 987.8, 976, 0.16, 0.042, 0);
+          tone(ac, 'sine', 740, 724, 0.34, 0.044, 0.14);
+          noise(ac, 0.06, 360, 2.2, 0.028, 0.24);
+        } else if (kind === 'surgeon') {
+          // 笑面诡医：手术器械清脆金属轻敲 + 药液滴答
+          tone(ac, 'triangle', 2240, 2120, 0.18, 0.026, 0);
+          tone(ac, 'sine', 3180, 2980, 0.24, 0.018, 0.05);
+          tone(ac, 'sine', 820, 520, 0.09, 0.026, 0.22);
+        } else if (kind === 'senior') {
+          // 血红衣学姐：空灵小提琴拉弦泛音 + 骤然「崩」断弦滑落
+          tone(ac, 'sawtooth', 659.25, 666, 0.32, 0.016, 0);
+          tone(ac, 'sine', 1318.5, 1300, 0.32, 0.015, 0);
+          tone(ac, 'sawtooth', 784, 210, 0.14, 0.032, 0.31);
+          noise(ac, 0.05, 1900, 1.8, 0.026, 0.31);
+        } else if (kind === 'zodiac_goat') {
+          // 生肖「人羊」：黄铜怀表精准清脆三连滴答
+          for (const [d, f] of [
+            [0, 1680],
+            [0.18, 1320],
+            [0.36, 1680]
+          ] as Array<[number, number]>) {
+            tone(ac, 'square', f, f * 0.72, 0.024, 0.022, d);
+            noise(ac, 0.022, 2400, 3.0, 0.018, d);
+          }
+        } else if (kind === 'jester') {
+          // 坐忘红中客：三颗白骨骰子急促滚碗碰撞声
+          for (const [d, f] of [
+            [0, 1180],
+            [0.065, 1460],
+            [0.12, 1020],
+            [0.19, 1580],
+            [0.27, 940]
+          ] as Array<[number, number]>) {
+            tone(ac, 'triangle', f, f * 0.65, 0.035, 0.032, d);
+            noise(ac, 0.028, 1750, 2.2, 0.02, d);
+          }
+        } else {
+          // 镜廊双生提线木偶师：木关节「咯哒」拧转 + 绷紧朱砂细丝拨颤
+          tone(ac, 'triangle', 460, 290, 0.05, 0.044, 0);
+          tone(ac, 'triangle', 540, 310, 0.05, 0.04, 0.09);
+          tone(ac, 'sine', 920, 860, 0.34, 0.024, 0.16);
+          noise(ac, 0.045, 1200, 2.4, 0.02, 0.08);
+        }
       });
     }
   };

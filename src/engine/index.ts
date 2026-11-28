@@ -8,6 +8,7 @@ import { ORDER_BY_ID } from '../data/orders';
 import { FAVOR_CARDS, SHOP_UPGRADES, SYSTEM_SKILLS } from '../data/systemShop';
 import type { GameState, StageView } from '../data/types';
 import { buildDayOrderMoves, buildStreetMoves } from './dayLoop';
+import { evaluateEnding } from './meta';
 import { buildNightBoardMoves } from './nightLoop';
 import { buildSettleShopMoves } from './settleLoop';
 import { buildSiteMoves } from './siteLoop';
@@ -21,16 +22,30 @@ export {
   clearSavedRun,
   note,
   hasSkill,
+  hasToken,
   OUTCOME_LABELS,
   DAY_DURATION_SEC,
   NIGHT_DURATION_SEC,
   getPhaseDurationSec
 } from './state';
+export {
+  META_STORAGE_KEY,
+  VIRAL_TOKEN_IDS,
+  ENDING_LABELS,
+  evaluateEnding,
+  loadMetaArchive,
+  saveMetaArchive,
+  clearMetaArchive,
+  syncMetaFromState,
+  type EndingId,
+  type MetaArchive
+} from './meta';
 export { fulfillDayOrder, flipToNight } from './dayLoop';
 export {
   startSite,
   settleNight,
   dawn,
+  computeThreatBreakdown,
   computeInitialThreat,
   triggerNightTrap,
   exposeNightTrap,
@@ -60,7 +75,7 @@ export function getStageView(state: GameState, openRoutes: () => void): StageVie
   if (state.phase === 'bad_end') {
     return {
       title: '灯火俱灭 · 规则清算',
-      description: state.badEndReason || '铺子没撑过这一晚，三盏灯齐齐熄灭。',
+      description: state.badEndReason || '铺子没撑过这一晚，门楣双红灯与平安烛齐齐熄灭。',
       notice: '坏结局过场：小品允许回溯至上一日日初重整经营，不提供当前履约中途重 roll。',
       moves: [
         {
@@ -197,24 +212,17 @@ export function getStageView(state: GameState, openRoutes: () => void): StageVie
   }
 
   if (state.phase === 'end') {
-    const isFullCampaign = state.maxDay >= 15;
-    const trueEnding =
-      isFullCampaign &&
-      state.h < 10 &&
-      state.handle === 0 &&
-      state.ty >= 8 &&
-      state.tn >= 6 &&
-      state.outcomes[15] === 'success';
-    const cleanEnough = state.h < 12 && state.handle === 0 && state.m >= 60;
-    const steady = state.h < 12 && state.ty >= 4;
+    const endingId = evaluateEnding(state);
+    const trueEnding = endingId === 'true_ending';
 
-    const title = trueEnding
-      ? '【真结局】阴阳双稳 · 纸火长明'
-      : cleanEnough
-        ? '灯火稳住，在诡异小镇站稳脚跟'
-        : steady
-          ? '铺子还开着，账面勉强过得去'
-          : '夜账还欠着几句话';
+    const title =
+      endingId === 'true_ending'
+        ? '【真结局】阴阳双稳 · 纸火长明'
+        : endingId === 'steady_foot'
+          ? '灯火稳住，在诡异小镇站稳脚跟'
+          : endingId === 'barely_open'
+            ? '铺子还开着，账面勉强过得去'
+            : '夜账还欠着几句话';
 
     const storyBranch = trueEnding
       ? '十五日试用期满，初始经营系统解除强制绑定并交出小镇通途权限。纸马童向你拱手一笑——无论去留，这间纸扎铺已是活人与诡异皆敬畏三分的灯火所在。'
@@ -395,7 +403,14 @@ export function buildLedgerNotes(state: GameState): Array<[string, string]> {
     const n = getScheduledNightOrder(state.day, state.h);
     lines.push(['今夜忌', n.taboo]);
   }
-  if (state.uneasy) lines.push(['不对劲', '铺子挂着「不对劲」重记，须连稳洁净清除']);
+  if (state.uneasy) {
+    lines.push([
+      '不对劲',
+      state.uneasyCleanDays >= 1
+        ? '消煞进度 1/1：今晚收尾选「扫灰焚香净铺」即可彻底清除'
+        : '消煞进度 0/1：须先稳过一晚常规夜或去城隍堂上香，再于收尾扫灰净铺清除'
+    ]);
+  }
   if (state.audit) lines.push(['余波', '镇里抽查 · 今日普通白单回款减少']);
   if (state.rumor && state.day === 4) lines.push(['余波', '阿杰传闻 · 今日普通白单少 1 张']);
   for (const token of state.tokens) {

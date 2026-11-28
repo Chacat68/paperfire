@@ -1,5 +1,6 @@
 import { CHARACTER_LIST, CHARACTER_PROFILES } from '../data/characters';
 import type { CharacterCamp, CharacterProfile, GameState } from '../data/types';
+import { loadMetaArchive, type MetaArchive } from '../engine';
 import { drawComicGuest, type GuestVariant } from '../scene/comic2d/characters';
 import {
   INK,
@@ -49,12 +50,18 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
   let currentFilter: RosterFilter = 'all';
   let selectedId = 'liu_tailor';
   let latestState: GameState | null = null;
+  let latestMeta: MetaArchive = loadMetaArchive();
   const detailEl = dialog.querySelector<HTMLElement>('.roster-detail');
 
+  function metStatus(profile: CharacterProfile): 'current' | 'archive' | 'none' {
+    if (profile.camp === 'resident') return 'current';
+    if (latestState?.metCharacterIds?.includes(profile.id)) return 'current';
+    if (latestMeta.metCharacterIds.includes(profile.id)) return 'archive';
+    return 'none';
+  }
+
   function isMet(profile: CharacterProfile): boolean {
-    if (!latestState) return false;
-    if (profile.camp === 'resident') return true;
-    return Boolean(latestState.metCharacterIds?.includes(profile.id));
+    return metStatus(profile) !== 'none';
   }
 
   function filteredList(): CharacterProfile[] {
@@ -194,7 +201,8 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
   }
 
   function renderDetail(profile: CharacterProfile) {
-    const met = isMet(profile);
+    const status = metStatus(profile);
+    const met = status !== 'none';
     detailEl?.classList.toggle('is-unmet', !met);
     drawPortrait(profile, met);
 
@@ -232,7 +240,7 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
     campEl.textContent = CAMP_LABELS[profile.camp];
     campEl.dataset.camp = profile.camp;
     titleEl.textContent = profile.title;
-    metBadgeEl.textContent = '已照面';
+    metBadgeEl.textContent = status === 'archive' ? '往期卷宗已录' : '已照面';
     metBadgeEl.classList.add('met');
 
     traitsEl.replaceChildren(
@@ -260,8 +268,12 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
       selectedId = (items.find((c) => isMet(c)) ?? items[0]).id;
     }
 
-    const metCount = CHARACTER_LIST.filter((c) => isMet(c)).length;
-    countEl.textContent = `已收录 ${CHARACTER_LIST.length} 位人物 · 已照面 ${metCount} 位`;
+    const metCurrentCount = CHARACTER_LIST.filter((c) => metStatus(c) === 'current').length;
+    const metTotalCount = CHARACTER_LIST.filter((c) => isMet(c)).length;
+    countEl.textContent =
+      metTotalCount > metCurrentCount
+        ? `共收录 ${CHARACTER_LIST.length} 位 · 本周目 ${metCurrentCount} 位 · 跨周目总录 ${metTotalCount} 位`
+        : `已收录 ${CHARACTER_LIST.length} 位人物 · 已照面 ${metCurrentCount} 位`;
 
     tabsEl.querySelectorAll<HTMLButtonElement>('button[data-filter]').forEach((btn) => {
       const active = btn.dataset.filter === currentFilter;
@@ -271,17 +283,19 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
 
     listEl.replaceChildren(
       ...items.map((c) => {
-        const met = isMet(c);
+        const status = metStatus(c);
+        const met = status !== 'none';
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `roster-item camp-${c.camp}${c.id === selectedId ? ' active' : ''}${met ? ' met' : ' unmet'}`;
         btn.dataset.charId = c.id;
+        const tagText = status === 'current' ? '已遇' : status === 'archive' ? '旧录' : '未遇';
         btn.innerHTML = `<span class="ri-seal">${met ? c.sealChar : '？'}</span>
           <span class="ri-body">
             <strong>${met ? c.name : '？？？'}</strong>
             <small>${met ? c.bubbleIdentity : '尚未照面 · 雾中剪影'}</small>
           </span>
-          <span class="ri-tag">${met ? '已遇' : '未遇'}</span>`;
+          <span class="ri-tag">${tagText}</span>`;
         return btn;
       })
     );
@@ -315,6 +329,7 @@ export function createRosterController(onFlipSound?: () => void): RosterControll
   return {
     open(state: GameState, initialCharId?: string) {
       latestState = state;
+      latestMeta = loadMetaArchive();
       if (initialCharId && CHARACTER_PROFILES[initialCharId]) {
         selectedId = initialCharId;
         currentFilter = 'all';

@@ -1,7 +1,7 @@
 import { getScheduledNightOrder } from '../data/night';
 import type { ActionOption, GameState } from '../data/types';
 import { dawn } from './nightLoop';
-import { hasSkill, note } from './state';
+import { hasSkill, hasToken, note } from './state';
 import { syncAndClaimDailyQuests } from './systemEngine';
 
 export function buildSettleShopMoves(state: GameState): ActionOption[] {
@@ -33,39 +33,54 @@ export function buildSettleShopMoves(state: GameState): ActionOption[] {
   };
 
   const hasWardHeart = hasSkill(state, 'ward_heart');
+  const hasWardBadge = hasToken(state, 'ward_badge');
+  const cleanGain = hasWardBadge ? 3 : 2;
   const cleanYinDrop = hasWardHeart ? 2 : 1;
+  const uneasyReady = state.uneasy && state.uneasyCleanDays >= 1;
 
   const moves: ActionOption[] = [
     {
       id: 'settle_clean_shop',
       title: hasWardHeart ? '扫灰焚香净铺 · 护心倍降' : '扫灰焚香净铺',
-      detail: state.uneasy
-        ? `纸料 −1 · 洁净 +2 · 阴气 −${cleanYinDrop} · 助消「不对劲」`
-        : `纸料 −1 · 洁净 +2 · 阴气 −${cleanYinDrop}`,
+      detail: uneasyReady
+        ? `【消煞就绪】纸料 −1 · 洁净 +${cleanGain} · 阴气 −${cleanYinDrop} · 立即清除「不对劲」`
+        : state.uneasy
+          ? `纸料 −1 · 洁净 +${cleanGain} · 阴气 −${cleanYinDrop}（消煞进度 0/1：需先稳过一晚常规夜或城隍堂上香）`
+          : `纸料 −1 · 洁净 +${cleanGain}${hasWardBadge ? '(通行牌+1)' : ''} · 阴气 −${cleanYinDrop}`,
       presentation: 'card',
       card: {
         kind: 'shop_chore',
         tag: '收尾铺务',
-        client: state.uneasy ? '净铺消煞 · 驱散不对劲' : '扫尽香灰 · 压阴回净',
+        client: uneasyReady
+          ? '消煞进度 1/1 · 今晚可彻底驱散不对劲'
+          : state.uneasy
+            ? '消煞进度 0/1 · 需先稳夜或城隍堂上香'
+            : '扫尽香灰 · 压阴回净',
         icon: 'broom',
         stats: [
           { label: '纸料', value: '−1', tone: 'cost' },
-          { label: '洁净', value: '+2', tone: 'gain' },
+          { label: '洁净', value: `+${cleanGain}`, tone: 'gain' },
           { label: '阴气', value: `−${cleanYinDrop}`, tone: 'pts' }
         ],
-        statusStamp: stampFor('settle_clean_shop')
+        statusStamp: stampFor('settle_clean_shop') ?? (uneasyReady ? '可消煞' : undefined)
       },
       reason: choreReason('settle_clean_shop', state.s < 1 ? '纸料不足' : ''),
       run: chooseChore('settle_clean_shop', () => {
         state.s -= 1;
-        state.c += 2;
+        state.c += cleanGain;
         state.h = Math.max(0, state.h - cleanYinDrop);
         if (state.uneasy && state.uneasyCleanDays >= 1) {
           state.uneasy = false;
           state.uneasyCleanDays = 0;
-          note(state, `收尾扫净香灰并走完洁净仪轨（阴气 −${cleanYinDrop}），铺里那股「不对劲」终于散尽。`);
+          note(
+            state,
+            `收尾扫净香灰并走完洁净仪轨（洁净 +${cleanGain}，阴气 −${cleanYinDrop}），铺里那股「不对劲」终于散尽。`
+          );
         } else {
-          note(state, `收尾扫净柜台香灰并焚香净铺：洁净 +2，阴气 −${cleanYinDrop}。`);
+          note(
+            state,
+            `收尾扫净柜台香灰并焚香净铺：洁净 +${cleanGain}${hasWardBadge ? '（三号病房通行牌 +1）' : ''}，阴气 −${cleanYinDrop}。`
+          );
         }
       })
     },

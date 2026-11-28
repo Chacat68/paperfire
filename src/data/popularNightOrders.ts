@@ -50,7 +50,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     tokenReward: {
       id: 'courier_receipt',
       name: '四四四免单回执',
-      desc: '异闻信物 · 证明你是午夜骑手的五星贵客，夜路平安'
+      desc: '异闻信物 · 前街杂货与诊所进货立减 3 现金'
     },
     failNote: '骑手盯着空荡荡的评分栏笑了一声，在门外多停了四十四秒才拧油门离去。'
   },
@@ -99,7 +99,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     tokenReward: {
       id: 'ward_badge',
       name: '三号病房通行牌',
-      desc: '异闻信物 · 印着朱砂十字的旧铁牌，诡医见牌退避三分'
+      desc: '异闻信物 · 扫灰净铺与城隍堂敬香额外洁净 +1'
     },
     failNote: '笑面诡医遗憾地收起手术刀，临走前多看了你的胸口两眼，铺里冷得像停尸房。'
   },
@@ -148,7 +148,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     tokenReward: {
       id: 'elegy_score',
       name: '断弦红丝谱',
-      desc: '异闻信物 · 缠着朱砂琴弦的旧乐谱，夜深偶闻轻柔安魂调'
+      desc: '异闻信物 · 天亮时若阴气 ≥ 8 自动涤荡阴气 −1'
     },
     failNote: '琴弦再次「崩」然崩断，一声凄厉走音震得窗纸簌簌直抖。'
   },
@@ -167,7 +167,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     taboo: '绝不可伸手揭开羊头面具，绝不可在游戏结束前违背自己押下的牌规。',
     pay: 118,
     ptsReward: 46,
-    risk: 3,
+    risk: 4,
     turns: 4,
     specialViral: true,
     guestArt: 'zodiac_goat',
@@ -197,7 +197,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     tokenReward: {
       id: 'zodiac_chip',
       name: '十二生肖铜筹',
-      desc: '异闻信物 · 刻着「羊」字的沉甸铜筹，标志着你在规则游戏里赢过面具官一局'
+      desc: '异闻信物 · 识破门外诱杀诡时额外赢得 +4 纸火点'
     },
     failNote: '黄铜怀表「啪」地合盖，「人羊」留下一句「下回轮回再续」便化雾隐入夜街。'
   },
@@ -216,7 +216,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     taboo: '绝对不可相信他的任何发誓，绝不可与他交换真名。',
     pay: 112,
     ptsReward: 50,
-    risk: 3,
+    risk: 4,
     turns: 4,
     specialViral: true,
     guestArt: 'zuowang_jester',
@@ -246,7 +246,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     tokenReward: {
       id: 'red_zhong_die',
       name: '红中老千骰',
-      desc: '异闻信物 · 六面全刻着朱砂「中」字的骨骰，坐忘道赠予同行的最高敬意'
+      desc: '异闻信物 · 白天标准与精工交单额外多收 4 现金'
     },
     failNote: '红中客大笑着化作一地假铜板与漫天红纸屑，气得柜台上的平安烛直跳火花。'
   },
@@ -265,7 +265,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     taboo: '绝对不可直接回答怀中木偶的任何问话，只可与执线人交易。',
     pay: 124,
     ptsReward: 48,
-    risk: 3,
+    risk: 4,
     turns: 4,
     specialViral: true,
     guestArt: 'puppet_twins',
@@ -295,7 +295,7 @@ export const POPULAR_NIGHT_ORDERS: Record<string, NightOrderDef> = {
     tokenReward: {
       id: 'puppet_cross',
       name: '双生提线木栓',
-      desc: '异闻信物 · 缠着朱砂红丝的雕花木十字架，可镇压屋内纸偶异动'
+      desc: '异闻信物 · 每夜首次用净纸或喊小栓搭手额外压局 −1'
     },
     failNote: '一根红线在门外悄然崩断，夜风里隐约传回小木偶清脆的咯咯笑声。'
   }

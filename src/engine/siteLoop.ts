@@ -1,6 +1,6 @@
 import type { ActionOption, GameState } from '../data/types';
 import { getActiveNightOrder, settleNight } from './nightLoop';
-import { hasSkill, note } from './state';
+import { hasSkill, hasToken, note } from './state';
 
 export function buildSiteMoves(state: GameState): ActionOption[] {
   const order = getActiveNightOrder(state);
@@ -636,44 +636,50 @@ export function buildSiteMoves(state: GameState): ActionOption[] {
   }
 
   if (state.favorCards.includes('card_boy')) {
+    const pendingStep = order.steps.find((st) => st.key !== 'done' && !has(st.key));
     moves.push(
       siteAction(
         'use-card-boy',
         '动用人情卡 · 纸马童引路带门',
-        '消耗人情卡 · 局面 −2 · 自动推进当前前置步骤',
+        pendingStep ? '消耗人情卡 · 局面 −2 · 自动推进当前前置步骤' : '消耗人情卡 · 局面 −2',
         () => {
           state.favorCards = state.favorCards.filter((c) => c !== 'card_boy');
           lowerThreat(2);
-          const pending = order.steps.find((st) => st.key !== 'done' && !has(st.key));
-          if (pending) state.steps.push(pending.key);
+          if (pendingStep) state.steps.push(pendingStep.key);
           note(state, '纸马童悄无声息上前递过纸活，替你直接压过了最棘手的一步！');
-        }
+        },
+        !pendingStep && state.threat <= 0 ? '局面与步骤均已稳妥' : ''
       )
     );
   }
 
+  // 双生提线木栓（提线木偶师信物）：每夜首次用净纸或喊小栓搭手额外压局 −1
+  const puppetCrossReady = hasToken(state, 'puppet_cross') && !usedSkill('token_puppet_cross');
+
   // P2 #11 伙计小栓夜班搭手（胆量 <= 2 拒夜班；习得「纸火护心」每夜首次不掉胆量）
   if (state.helper.hired) {
     const freeNerve = hasWardHeart && !usedSkill('helper_free_assist');
+    const assistPower = puppetCrossReady ? 2 : 1;
     moves.push(
       siteAction(
         'helper-assist',
-        `喊伙计小栓搭把手（胆量 ${state.helper.nerve}）`,
+        `喊伙计小栓搭把手（胆量 ${state.helper.nerve}${puppetCrossReady ? ' · 木栓镇压' : ''}）`,
         freeNerve
-          ? '不耗纸料 · 局面 −1 · 纸火护心免掉胆量'
-          : '不耗纸料 · 局面 −1 · 伙计胆量 −1',
+          ? `不耗纸料 · 局面 −${assistPower} · 纸火护心免掉胆量`
+          : `不耗纸料 · 局面 −${assistPower} · 伙计胆量 −1`,
         () => {
           if (freeNerve) {
             markSkillUsed('helper_free_assist');
           } else {
             state.helper.nerve = Math.max(0, state.helper.nerve - 1);
           }
-          lowerThreat(1);
+          if (puppetCrossReady) markSkillUsed('token_puppet_cross');
+          lowerThreat(assistPower);
           note(
             state,
             freeNerve
-              ? `小栓借你护心火势稳住门框与香火（局面 −1，纸火护心未损胆量）。`
-              : `小栓咬牙替你稳住门框与香火（局面 −1，胆量降至 ${state.helper.nerve}）。`
+              ? `小栓借你护心火势${puppetCrossReady ? '与双生提线木栓' : ''}稳住门框与香火（局面 −${assistPower}，纸火护心未损胆量）。`
+              : `小栓咬牙${puppetCrossReady ? '借双生提线木栓' : ''}替你稳住门框与香火（局面 −${assistPower}，胆量降至 ${state.helper.nerve}）。`
           );
         },
         state.helper.nerve <= 2
@@ -685,15 +691,22 @@ export function buildSiteMoves(state: GameState): ActionOption[] {
     );
   }
 
+  const paperPower = puppetCrossReady ? 2 : 1;
   moves.push(
     siteAction(
       'use-paper',
-      '用净纸稳住局面',
-      '纸料 −1 · 局面 −1',
+      puppetCrossReady ? '用净纸稳住局面 · 木栓镇压' : '用净纸稳住局面',
+      `纸料 −1 · 局面 −${paperPower}${puppetCrossReady ? '（双生木栓每夜首击 +1）' : ''}`,
       () => {
         state.s -= 1;
-        lowerThreat(1);
-        note(state, '净纸压住了动静。');
+        if (puppetCrossReady) markSkillUsed('token_puppet_cross');
+        lowerThreat(paperPower);
+        note(
+          state,
+          puppetCrossReady
+            ? '净纸配双生提线木栓齐压动静，煞气立退两分（局面 −2）。'
+            : '净纸压住了动静。'
+        );
       },
       state.threat <= 0 ? '局面已稳' : state.s < 1 ? '缺净纸' : ''
     ),

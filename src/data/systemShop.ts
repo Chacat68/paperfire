@@ -213,11 +213,11 @@ export const TOWN_INTEL_DOCS: TownIntelDoc[] = [
   {
     id: 'intel_three_lamps',
     code: '密档 · 零壹',
-    title: '三盏红灯与安全屋界碑',
+    title: '双红灯、平安烛与安全屋界碑',
     category: '镇界规则',
     costPts: 12,
     summary: '为何诱杀诡无论开价多高，都死活要哄你跨出铺门？',
-    body: '老纸扎铺门楣悬着的三盏朱砂红灯，是整座诡异小镇仅存的几处合法「阳火界碑」之一。凡在红灯照耀的柜台之内，无论登门诡客位格多高，皆受阴阳契约约束、须按旧例交割；一旦掌柜自愿卸闩、吹灯或跨出门槛，系统安全屋庇护即刻失效。',
+    body: '老纸扎铺门楣悬着的「纸」「火」双红灯与柜台上的平安蜡烛，合称整座诡异小镇仅存的几处合法「阳火界碑」之一。凡在灯烛照耀的柜台之内，无论登门诡客位格多高，皆受阴阳契约约束、须按旧例交割；一旦掌柜自愿卸闩、吹灯或跨出门槛，系统安全屋庇护即刻失效。',
     tip: '实战结论：一切「诱你离铺/吹灯/赴外地办事」的夜单 100% 为致命诱杀诡，果断识破拒接可稳赚 +6 纸火点与 −1 阴气。'
   },
   {
@@ -278,7 +278,7 @@ export interface CodexMilestoneDef {
   detail: string;
   rewardPts: number;
   target: number;
-  kind: 'met' | 'intel' | 'traps' | 'skills';
+  kind: 'met' | 'intel' | 'traps' | 'skills' | 'viral_tokens';
 }
 
 export interface SkillBranchMeta {
@@ -396,7 +396,7 @@ export const SYSTEM_SKILLS: SkillDef[] = [
     name: '借火定神',
     costPts: 18,
     tag: '初阶 · 主动技',
-    summary: '借门楣三盏红灯阳火稳住心神，无符亦能压场。',
+    summary: '借门楣双红灯与平安烛阳火稳住心神，无符亦能压场。',
     effects: ['夜战解锁主动技「技 · 借灯定神」', '每夜 1 次 · 零消耗 · 局面 −2 且洁净 +1'],
     hookNote: '夜里履约现场直接出现技能按钮'
   },
@@ -482,5 +482,13 @@ export const CODEX_MILESTONES: CodexMilestoneDef[] = [
     rewardPts: 25,
     target: 6,
     kind: 'intel'
+  },
+  {
+    id: 'ms_viral_3',
+    title: '异闻赏鉴 · 集齐 3 件异闻信物',
+    detail: '完成 3 位「奇诡特邀」异闻奇客夜单并收齐信物',
+    rewardPts: 22,
+    target: 3,
+    kind: 'viral_tokens'
   }
 ];

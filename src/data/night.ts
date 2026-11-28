@@ -345,7 +345,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     boardTitle: '持簿而立的旧账阴差',
     boardDesc: '明晚将迎首次顶格诡异夜，今晚先由长衫阴差上门核对前五日阴账。',
     siteTitle: '灯下对簿',
-    siteDesc: '如实摊开五日夜账、定住三盏灯火，局面归零后盖朱砂印结清。',
+    siteDesc: '如实摊开五日夜账、定住平安烛与双红灯火，局面归零后盖朱砂印结清。',
     siteIntro: '阴差把一页发黄生死簿摊在柜台灯下，白光眼镜反出一片冷雾。',
     taboo: '不可隐瞒账上未清的把柄。',
     pay: 80,
@@ -363,7 +363,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       {
         speaker: '旧账阴差',
         cue: '他推了推泛白光的眼镜，语气公事公办、不带一丝感情。',
-        line: '「无需出铺，就在这三盏红灯下摊开你前五日的阴阳两账，如实核清盈亏与把柄，再稳住灯火落朱砂印结清。」'
+        line: '「无需出铺，就在这双红灯与平安烛下摊开你前五日的阴阳两账，如实核清盈亏与把柄，再稳住灯火落朱砂印结清。」'
       },
       {
         speaker: '旧账阴差',
@@ -381,7 +381,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     tokenReward: {
       id: 'bronze_clasp',
       name: '旧账铜扣',
-      desc: '五日稳局信物 · 证明铺子已在阴间挂号立稳'
+      desc: '五日稳局信物 · 夜单履约成功额外多收 10 现金'
     },
     favorCardReward: 'card_boy',
     failNote: '对簿没压住，这笔旧账记到了后续顶格夜。',
@@ -396,7 +396,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     boardDesc: '【系统警报：顶格高压，仅 3 回合】北巷无声唢呐停在铺门外，身披朱砂嫁衣的纸新娘垂头讨要合卺纸轿。',
     siteTitle: '垂目送嫁',
     siteDesc: '顶格高压仅 3 回合！先敬喜香压煞、再交合卺纸轿，切莫抬头！',
-    siteIntro: '红盖头微微一颤，屋里三盏灯火同时压低了半寸。',
+    siteIntro: '红盖头微微一颤，屋里双红灯与平安烛火同时压低了半寸。',
     taboo: '【顶格重忌】全程不可抬头窥视红盖头之下。',
     pay: 110,
     ptsReward: 46,
@@ -413,7 +413,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       },
       {
         speaker: '无轿纸新娘',
-        cue: '屋里三盏红灯齐齐矮了半寸，系统弹出【3 回合顶格高压】警报。',
+        cue: '门楣双红灯与柜台烛焰齐齐矮了半寸，系统弹出【3 回合顶格高压】警报。',
         line: '「你不必离铺送亲。只须低眉垂目，在柜台前敬上喜香压煞、献出合卺纸轿再送过门槛，三回合内立见分晓。」'
       },
       {
@@ -582,7 +582,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       {
         speaker: '百戏游神',
         cue: '双肩朱砂靠旗在无风夜里猎猎作响，高大古纸面低垂于门楣之外，沉沉鼓点震得茶杯轻颤。',
-        line: '「阴市借道，百戏过街。纸火老铺既亮着三盏长明灯，当按古礼敬献引路大灯与三牲纸扎。」'
+        line: '「阴市借道，百戏过街。纸火老铺既亮着「纸」「火」双红灯与平安烛，当按古礼敬献引路大灯与三牲纸扎。」'
       },
       {
         speaker: '百戏游神',
@@ -663,7 +663,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     taboo: '不可回答来客关于「水有多深」的提问。',
     pay: 88,
     ptsReward: 32,
-    risk: 2,
+    risk: 3,
     turns: 4,
     guestArt: 'ferry_ghost',
     storyBeats: [
@@ -789,7 +789,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     boardTitle: '并立灯下的纸马童与大账阴差',
     boardDesc: '第十五夜钟声敲响。纸马童与旧账阴差并立灯下，初始经营系统弹出最终考核：核清十五日因果，定你去留！',
     siteTitle: '终审合账',
-    siteDesc: '摊开十五日阴阳总账、燃亮三盏长明灯，压零局面后落朱砂总印通关！',
+    siteDesc: '摊开十五日阴阳总账、稳燃双红灯与平安烛，压零局面后落朱砂总印通关！',
     siteIntro: '系统面板泛起朱砂微光：「十五日试用期满。请向本镇活人与诡异交出最终答卷。」',
     taboo: '不可逃避账上未了的因果与把柄。',
     pay: 180,
@@ -807,7 +807,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
       {
         speaker: '纸马童',
         cue: '纸马童轻声开口，首次露出一丝极淡的笑意。',
-        line: '「守住三盏长明灯，摊开十五日总账压平局面、落下朱砂总印——莫被门外最后一道假捷径骗出去功亏一篑。」'
+        line: '「守住双红灯与平安烛，摊开十五日总账压平局面、落下朱砂总印——莫被门外最后一道假捷径骗出去功亏一篑。」'
       },
       {
         speaker: '大账阴差',
@@ -819,7 +819,7 @@ export const NIGHT_ORDERS: Record<string, NightOrderDef> = {
     intelHintVerified: '已核实｜真正的终审只在铺内灯下合账；那个自称「上任老掌柜」哄你烧掉总账钻暗道逃跑的，是终局最后一道诱杀诡！',
     steps: [
       { key: 'audit_ledger', label: '呈交十五日总账' },
-      { key: 'calm_flame', label: '稳燃三盏长明灯' },
+      { key: 'calm_flame', label: '稳燃双灯与平安烛' },
       { key: 'done', label: '落印通关' }
     ],
     failNote: '总账未能合拢，系统判定试用期勉强延留。',

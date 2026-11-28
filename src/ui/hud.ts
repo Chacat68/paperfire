@@ -1,4 +1,4 @@
-import { DAY_META } from '../data/night';
+import { DAY_META, NIGHT_ORDERS, getScheduledNightOrder } from '../data/night';
 import type { GameState, StageView } from '../data/types';
 import { isNightPhase } from '../engine';
 import type { SfxEngine } from './audio';
@@ -23,6 +23,7 @@ export interface ClockView {
   progressPct: number;
   urgent: boolean;
   paused?: boolean;
+  pauseTag?: string;
 }
 
 export interface HudController {
@@ -38,6 +39,7 @@ export function createHudController(): HudController {
   const byId = (id: string) => document.getElementById(id)!;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let prevStats: StatSnapshot | null = null;
+  let lastQuickSignature = '';
   let curtainTimer = 0;
   let displayedPts: number | null = null;
   let ptsRollRaf = 0;
@@ -260,7 +262,20 @@ export function createHudController(): HudController {
           return `<li class="${met ? 'met' : ''}">${met ? '✓' : '○'} ${label}</li>`;
         })
         .join('') ?? '';
-    hud.innerHTML = `<div class="encounter-row">${meter('局面', state.threat, 5, 'threat')}${meter('剩余回合', state.turns, 4, 'turns')}</div>
+    const activeOrder =
+      (state.activeNightOrderId && NIGHT_ORDERS[state.activeNightOrderId]) ||
+      getScheduledNightOrder(state.day, state.h);
+    const maxTurns = Math.max(activeOrder.turns, state.turns);
+    const remainingSteps = screen.steps
+      ? screen.steps.filter(({ key }) => !state.steps.includes(key)).length
+      : 1;
+    const turnAlert =
+      state.turns < remainingSteps
+        ? `<span class="turn-alert critical">余 ${state.turns} 回合不足完成全部步骤 · 可用人情压下</span>`
+        : state.turns === remainingSteps && state.threat > 0
+          ? `<span class="turn-alert warn">余 ${state.turns} 回合吃紧 · 须速压零交付</span>`
+          : '';
+    hud.innerHTML = `<div class="encounter-row">${meter('局面', state.threat, 5, 'threat')}${meter('剩余回合', state.turns, maxTurns, 'turns')}${turnAlert}</div>
       <div class="encounter-taboo">
         ${screen.notice ? `<span class="taboo-tag"><b>忌</b>${screen.notice}</span>` : ''}
         ${stepsHtml ? `<ol class="encounter-steps" aria-label="履约步骤">${stepsHtml}</ol>` : ''}
@@ -304,7 +319,7 @@ export function createHudController(): HudController {
     renderClock(clock: ClockView) {
       byId('period').textContent = clock.periodText;
       byId('countdown-label').textContent = clock.paused
-        ? `${clock.countdownLabel} · 暂停`
+        ? `${clock.countdownLabel} · ${clock.pauseTag ?? '暂停'}`
         : clock.countdownLabel;
       byId('countdown-value').textContent = clock.countdownText;
       byId('countdown-fill').style.width = `${Math.max(0, Math.min(100, clock.progressPct))}%`;
@@ -391,7 +406,33 @@ export function createHudController(): HudController {
       };
 
       byId('resources').innerHTML = tally.map((_, i) => renderStat(i, false)).join('');
-      byId('quick-resources').innerHTML = [0, 1, 2, 3, 4, 6].map((i) => renderStat(i, true)).join('');
+
+      // 顶栏快捷资源：包含洁净 c，并在键值不变时就地更新节点，避免打断正在播出的 .delta-pop 飘字与 pts 滚数
+      const quickIndices = [0, 1, 2, 3, 4, 5, 6];
+      const quickSignature = quickIndices.map((i) => tally[i][0]).join(',');
+      const quickEl = byId('quick-resources');
+      if (quickSignature !== lastQuickSignature || quickEl.children.length !== quickIndices.length) {
+        lastQuickSignature = quickSignature;
+        quickEl.innerHTML = quickIndices.map((i) => renderStat(i, true)).join('');
+      } else {
+        quickIndices.forEach((tallyIdx, pos) => {
+          const [key, name, value] = tally[tallyIdx];
+          const slot = quickEl.children[pos] as HTMLElement | undefined;
+          if (!slot) return;
+          slot.classList.toggle('primary', key === 'ap' || key === 'f' || key === 'pts');
+          slot.classList.toggle(
+            'stat-yin-high',
+            (key === 'h' && state.h >= 10) || (key === 'ration' && state.ration === 0)
+          );
+          const dt = slot.querySelector('dt');
+          const dd = slot.querySelector('dd');
+          if (dt && dt.textContent !== name) dt.textContent = name;
+          if (dd && !(key === 'pts' && ptsRollRaf)) {
+            const nextText = String(value);
+            if (dd.textContent !== nextText) dd.textContent = nextText;
+          }
+        });
+      }
       spawnDeltas({
         ap: state.ap,
         f: state.f,

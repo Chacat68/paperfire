@@ -40,7 +40,7 @@ const PROLOGUE_BEATS: PrologueBeat[] = [
   },
   {
     chapter: '序幕 · 其二',
-    title: '无主老铺 · 三灯悬梁',
+    title: '无主老铺 · 双灯映烛',
     speaker: '旁白',
     speakerKind: 'narrator',
     lines: [

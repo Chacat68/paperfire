@@ -9,6 +9,8 @@ import {
   TOWN_INTEL_DOCS
 } from '../data/systemShop';
 import type { GameState, ShopUpgradeId, SkillId } from '../data/types';
+import { VIRAL_TOKEN_IDS } from './meta';
+import { computeThreatBreakdown } from './nightLoop';
 import { DAY_DURATION_SEC, hasSkill, note } from './state';
 
 /**
@@ -46,6 +48,9 @@ export function syncCodexMilestones(state: GameState): number {
   const intelCount = state.unlockedIntelIds?.length ?? 0;
   const trapCount = (state.visitRecords ?? []).filter((v) => v.result === 'trap_exposed').length;
   const skillCount = state.learnedSkills?.length ?? 0;
+  const viralTokenCount = state.tokens.filter((t) =>
+    (VIRAL_TOKEN_IDS as readonly string[]).includes(t.id)
+  ).length;
 
   let gained = 0;
   for (const ms of CODEX_MILESTONES) {
@@ -57,7 +62,9 @@ export function syncCodexMilestones(state: GameState): number {
           ? intelCount
           : ms.kind === 'skills'
             ? skillCount
-            : trapCount;
+            : ms.kind === 'viral_tokens'
+              ? viralTokenCount
+              : trapCount;
     if (current >= ms.target) {
       state.claimedCodexMilestones.push(ms.id);
       state.pts += ms.rewardPts;
@@ -205,6 +212,8 @@ export interface SystemDiagnostics {
     informedCount: number;
     scannedCount: number;
     tokensCount: number;
+    viralTokensCount: number;
+    viralTokensTotal: number;
     upgradesCount: number;
   };
   trueEndingChecks: Array<{ label: string; current: string; met: boolean }>;
@@ -212,26 +221,7 @@ export interface SystemDiagnostics {
 
 export function getSystemDiagnostics(state: GameState): SystemDiagnostics {
   const order = getScheduledNightOrder(state.day, state.h);
-  const yinBonus = Math.min(2, Math.floor(state.h / 6));
-  const proxyBonus = state.usedProxyToday ? 1 : 0;
-  const handleBonus =
-    (order.id === 'n5_old_account' || order.id === 'n15_final_ledger') && state.handle > 0 ? 1 : 0;
-  const bellBonus = state.upgrades.includes('copper_bell') ? 1 : 0;
-  const eyeBonus = hasSkill(state, 'sight_eye') ? 1 : 0;
-  const maskBonus =
-    order.id === 'n15_final_ledger' && state.tokens.some((t) => t.id === 'opera_mask_jade') ? 1 : 0;
-  const estimatedThreat0 = Math.max(
-    1,
-    Math.min(5, order.risk + yinBonus + proxyBonus + handleBonus - bellBonus - eyeBonus - maskBonus)
-  );
-
-  const parts: string[] = [`基础 ${order.risk}`];
-  if (yinBonus > 0) parts.push(`阴气 +${yinBonus}`);
-  if (proxyBonus > 0) parts.push(`替代料 +${proxyBonus}`);
-  if (handleBonus > 0) parts.push(`把柄 +${handleBonus}`);
-  if (bellBonus > 0) parts.push(`铜铃 −${bellBonus}`);
-  if (eyeBonus > 0) parts.push(`法眼 −${eyeBonus}`);
-  if (maskBonus > 0) parts.push(`残玉 −${maskBonus}`);
+  const { threat: estimatedThreat0, parts } = computeThreatBreakdown(state, order);
 
   const records = state.visitRecords ?? [];
   const livingDone = records.filter((r) => r.kind === 'living').length;
@@ -265,6 +255,10 @@ export function getSystemDiagnostics(state: GameState): SystemDiagnostics {
       informedCount: state.informedDays.length,
       scannedCount: state.scannedTrapDays?.length ?? 0,
       tokensCount: state.tokens.length,
+      viralTokensCount: state.tokens.filter((t) =>
+        (VIRAL_TOKEN_IDS as readonly string[]).includes(t.id)
+      ).length,
+      viralTokensTotal: VIRAL_TOKEN_IDS.length,
       upgradesCount: state.upgrades.length
     },
     trueEndingChecks: [
@@ -283,6 +277,7 @@ export function getSystemDiagnostics(state: GameState): SystemDiagnostics {
 
 /** Redeems survival supplies or protective talismans using system points (`pts`). */
 export function redeemSystemSupply(state: GameState, supplyId: string): boolean {
+  if (state.phase === 'site' || state.phase === 'end' || state.phase === 'bad_end') return false;
   const def = SYSTEM_SUPPLIES.find((s) => s.id === supplyId);
   if (!def || state.pts < def.costPts) return false;
 
@@ -327,6 +322,7 @@ export function redeemSystemSupply(state: GameState, supplyId: string): boolean 
 
 /** Purchases a permanent paper-craft shop upgrade (rendered directly on the 2D canvas!). */
 export function buyShopUpgrade(state: GameState, upgradeId: ShopUpgradeId): boolean {
+  if (state.phase === 'site' || state.phase === 'end' || state.phase === 'bad_end') return false;
   const def = SHOP_UPGRADES.find((u) => u.id === upgradeId);
   if (!def) return false;
   if (state.upgrades.includes(upgradeId)) return false;

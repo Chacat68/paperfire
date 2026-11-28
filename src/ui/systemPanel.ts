@@ -1,5 +1,5 @@
 import { CHARACTER_PROFILES } from '../data/characters';
-import { DAY_META, getScheduledNightOrder, getScheduledTrapOrder } from '../data/night';
+import { DAY_META, getNightOrderById, getScheduledNightOrder, getScheduledTrapOrder } from '../data/night';
 import {
   CODEX_MILESTONES,
   SKILL_BRANCHES,
@@ -8,10 +8,13 @@ import {
 } from '../data/systemShop';
 import type { GameState, VisitRecord, VisitResultKind } from '../data/types';
 import {
+  ENDING_LABELS,
+  VIRAL_TOKEN_IDS,
   getIntelForecastCost,
   getIntelScanCost,
   getSystemDiagnostics,
-  hasSkill
+  hasSkill,
+  loadMetaArchive
 } from '../engine';
 
 export type SystemTabId = 'exchange' | 'skills' | 'intel' | 'visitors' | 'codex';
@@ -435,11 +438,27 @@ export function createSystemPanelController(): SystemPanelController {
         pct: Math.round((cp.skillsCount / Math.max(1, cp.skillsTotal)) * 100)
       },
       {
+        label: '异闻信物收集',
+        val: `${cp.viralTokensCount} / ${cp.viralTokensTotal} 件`,
+        pct: Math.round((cp.viralTokensCount / Math.max(1, cp.viralTokensTotal)) * 100)
+      },
+      {
         label: '铺面升级 / 信物',
         val: `${cp.upgradesCount}/4 · ${cp.tokensCount} 件`,
         pct: Math.round((cp.upgradesCount / 4) * 100)
       }
     ];
+
+    const meta = loadMetaArchive();
+    const metaViralCount = meta.collectedTokenIds.filter((id) =>
+      (VIRAL_TOKEN_IDS as readonly string[]).includes(id)
+    ).length;
+    const endingsHtml =
+      meta.endingsUnlocked.length > 0
+        ? meta.endingsUnlocked
+            .map((eid) => `<span class="meta-ending-pill${eid === 'true_ending' ? ' true-end' : ''}">${escapeHtml(ENDING_LABELS[eid])}</span>`)
+            .join('')
+        : '<span class="meta-ending-empty">尚未达成任何终局（重开周目亦会永久保留总录）</span>';
 
     const milestonesHtml = CODEX_MILESTONES.map((ms) => {
       const done = claimed.includes(ms.id);
@@ -450,7 +469,9 @@ export function createSystemPanelController(): SystemPanelController {
             ? cp.intelCount
             : ms.kind === 'skills'
               ? cp.skillsCount
-              : trapExposedCount;
+              : ms.kind === 'viral_tokens'
+                ? cp.viralTokensCount
+                : trapExposedCount;
       const clampedCur = Math.min(ms.target, cur);
       return `<li class="cm-item${done ? ' done' : ''}">
         <div class="cm-top">
@@ -495,7 +516,8 @@ export function createSystemPanelController(): SystemPanelController {
         ? knownDays
             .map((d) => {
               const meta = DAY_META[d] ?? DAY_META[1];
-              const order = getScheduledNightOrder(d, state.h);
+              const recorded = getNightOrderById(state.nightOrderHistory?.[d]);
+              const order = recorded && !recorded.isTrap ? recorded : getScheduledNightOrder(d, state.h);
               const trap = getScheduledTrapOrder(d);
               const hasTrapClue = (state.scannedTrapDays ?? []).includes(d) || exposedTrapDays.has(d);
               return `<li class="ct-item">
@@ -530,6 +552,17 @@ export function createSystemPanelController(): SystemPanelController {
         : '<li class="ct-empty">尚未解密小镇机密档案，可切至「二 · 情报打探」消耗纸火点逐卷破译。</li>';
 
     el.innerHTML = `
+      <div class="meta-archive-bar">
+        <div class="mab-head">
+          <span class="mab-seal" aria-hidden="true">永</span>
+          <div class="mab-title">
+            <strong>跨周目永久总卷</strong>
+            <small>人物总录 ${meta.metCharacterIds.length}/${cp.metTotal} · 密档 ${meta.unlockedIntelIds.length}/${cp.intelTotal} · 异闻信物 ${metaViralCount}/${VIRAL_TOKEN_IDS.length} · 完结 ${meta.runsCompleted} 局${meta.bestPts > 0 ? ` · 最高结余 ${meta.bestPts} 点` : ''}</small>
+          </div>
+        </div>
+        <div class="mab-endings">${endingsHtml}</div>
+      </div>
+
       <div class="codex-overview">
         ${overviewCards
           .map(

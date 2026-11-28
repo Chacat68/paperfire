@@ -1,4 +1,4 @@
-import { DAY_META, getScheduledNightOrder } from '../data/night';
+import { DAY_META, getNightOrderById, getScheduledNightOrder } from '../data/night';
 import { SCENARIOS } from '../data/scenarios';
 import { SHOP_UPGRADES, SYSTEM_SUPPLIES, type ShopIconKind } from '../data/systemShop';
 import type { GameState, NightOutcome, ScenarioId, ShopUpgradeId, SkillId } from '../data/types';
@@ -77,8 +77,8 @@ export interface SystemDialogHooks {
 
 export function createDialogsController(
   onSelectScenario: (id: ScenarioId, title: string) => void,
-  onRedeemSupply: (supplyId: string) => void,
-  onBuyUpgrade: (upgradeId: ShopUpgradeId) => void,
+  onRedeemSupply: (supplyId: string) => boolean,
+  onBuyUpgrade: (upgradeId: ShopUpgradeId) => boolean,
   onReplayPrologue: () => void,
   onResetRun: () => void,
   onFlipSound?: () => void,
@@ -336,11 +336,13 @@ export function createDialogsController(
     const actionId = button.dataset.action ?? '';
     const cardName = button.dataset.cardTitle ?? '';
     if (actionId.startsWith('sys_')) {
-      onRedeemSupply(actionId);
-      if (cardName) showShopToast(`✓ 已兑换：${cardName}`);
+      if (onRedeemSupply(actionId) && cardName) {
+        showShopToast(`✓ 已兑换：${cardName}`);
+      }
     } else if (actionId.startsWith('upg_')) {
-      onBuyUpgrade(actionId.slice(4) as ShopUpgradeId);
-      if (cardName) showShopToast(`✓ 已永久装配：${cardName}`);
+      if (onBuyUpgrade(actionId.slice(4) as ShopUpgradeId) && cardName) {
+        showShopToast(`✓ 已永久装配：${cardName}`);
+      }
     } else if (actionId.startsWith('skill_')) {
       const skillId = actionId.slice('skill_'.length) as SkillId;
       if (systemHooks.onLearnSkill?.(skillId)) {
@@ -439,7 +441,9 @@ export function createDialogsController(
       onClose?: () => void
     ) {
       pendingDawnClose = onClose ?? null;
-      const prevNight = getScheduledNightOrder(survivedDay, state.h);
+      const prevNight =
+        getNightOrderById(state.nightOrderHistory?.[survivedDay]) ??
+        getScheduledNightOrder(survivedDay, state.h);
       const nextMeta = DAY_META[state.day] ?? DAY_META[1];
       const nextNight = getScheduledNightOrder(state.day, state.h);
       const starved = state.starveStreak > 0;
@@ -453,7 +457,7 @@ export function createDialogsController(
           : '今天成功活下来了';
 
       const quoteByOutcome: Record<string, string> = {
-        success: '门外诡影随晨雾散尽，三盏红灯安稳燃至五更。纸火经营系统已核销昨夜阴账，又从诡异小镇手里抢回一天性命。',
+        success: '门外诡影随晨雾散尽，门楣「纸」「火」双红灯与平安烛安稳燃至五更。纸火经营系统已核销昨夜阴账，又从诡异小镇手里抢回一天性命。',
         rested: '昨夜早早落闩熄灯，铺门紧闭未沾半点阴风。鸡鸣声起时门缝透进微光，你在静寂中安然熬到了天明。',
         refused: '你死守门闩未让诡异得逞，虽少挣一笔夜赏，但总算平平安安把这条命留到了天亮。',
         pressed: '昨夜借人情强行压住了局面，账上虽添一笔暗债，好歹又把白昼盼了回来。',
